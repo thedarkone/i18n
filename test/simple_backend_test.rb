@@ -98,17 +98,7 @@ module I18nBackendTestSetup
   end
 end
 
-module I18nSimpleBackendTestSetup
-  include I18nBackendTestSetup
-  
-  def new_backend
-    I18n::Backend::Fast.new
-  end
-end
-
-class I18nSimpleBackendTranslationsTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendTranslationsTest
   def test_store_translations_adds_translations # no, really :-)
     @backend.store_translations :'en', :foo => 'bar'
     assert_equal Hash[:'en', {:foo => 'bar'}], backend_get_translations
@@ -132,9 +122,7 @@ class I18nSimpleBackendTranslationsTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendAvailableLocalesTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-  
+module I18nBackendAvailableLocalesTest
   def test_available_locales
     @backend = new_backend
     @backend.store_translations 'de', :foo => 'bar'
@@ -144,9 +132,7 @@ class I18nSimpleBackendAvailableLocalesTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendTranslateTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendTranslateTest
   def test_translate_calls_lookup_with_locale_given
     @backend.expects(:lookup).with('de', :bar, [:foo]).returns 'bar'
     @backend.translate 'de', :bar, :scope => [:foo]
@@ -198,9 +184,7 @@ class I18nSimpleBackendTranslateTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLookupTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLookupTest
   # useful because this way we can use the backend with no key for interpolation/pluralization
   def test_lookup_given_nil_as_a_key_returns_nil
     assert_nil @backend.send(:lookup, 'en', nil)
@@ -211,9 +195,7 @@ class I18nSimpleBackendLookupTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendPluralizeTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendPluralizeTest
   def test_pluralize_given_nil_returns_the_given_entry
     entry = {:one => 'bar', :other => 'bars'}
     assert_equal entry, @backend.send(:pluralize, nil, entry, nil)
@@ -252,9 +234,7 @@ class I18nSimpleBackendPluralizeTest < Test::Unit::TestCase
   # end
 end
 
-class I18nSimpleBackendInterpolateTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendInterpolateTest
   def test_interpolate_given_a_value_hash_interpolates_the_values_to_the_string
     assert_equal 'Hi David!', @backend.send(:interpolate, nil, 'Hi {{name}}!', :name => 'David')
   end
@@ -316,9 +296,7 @@ class I18nSimpleBackendInterpolateTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLocalizeDateTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLocalizeDateTest
   def setup
     @backend = new_backend
     add_datetime_translations
@@ -370,9 +348,7 @@ class I18nSimpleBackendLocalizeDateTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLocalizeDateTimeTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLocalizeDateTimeTest
   def setup
     @backend = new_backend
     add_datetime_translations
@@ -422,9 +398,7 @@ class I18nSimpleBackendLocalizeDateTimeTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLocalizeTimeTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLocalizeTimeTest
   def setup
     @old_timezone, ENV['TZ'] = ENV['TZ'], 'UTC'
     @backend = new_backend
@@ -480,9 +454,7 @@ class I18nSimpleBackendLocalizeTimeTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendHelperMethodsTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-  
+module I18nBackendHelperMethodsTest
   def test_deep_symbolize_keys_works
     result = @backend.send :deep_symbolize_keys, 'foo' => {'bar' => {'baz' => 'bar'}}
     expected = {:foo => {:bar => {:baz => 'bar'}}}
@@ -490,9 +462,7 @@ class I18nSimpleBackendHelperMethodsTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLoadTranslationsTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLoadTranslationsTest
   def test_load_translations_with_unknown_file_type_raises_exception
     assert_raises(I18n::UnknownFileType) { @backend.load_translations "#{@locale_dir}/en.xml" }
   end
@@ -522,9 +492,7 @@ class I18nSimpleBackendLoadTranslationsTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendLoadPathTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-
+module I18nBackendLoadPathTest
   def teardown
     I18n.load_path = []
   end
@@ -546,9 +514,7 @@ class I18nSimpleBackendLoadPathTest < Test::Unit::TestCase
   end
 end
 
-class I18nSimpleBackendReloadTranslationsTest < Test::Unit::TestCase
-  include I18nSimpleBackendTestSetup
-  
+module I18nBackendReloadTranslationsTest
   def setup
     @backend = new_backend
     I18n.load_path = [File.dirname(__FILE__) + '/locale/en.yml']
@@ -574,3 +540,35 @@ class I18nSimpleBackendReloadTranslationsTest < Test::Unit::TestCase
     assert_equal @backend.initialized?, false
   end
 end
+
+test_modules = %w(I18nBackendTranslationsTest
+                  I18nBackendAvailableLocalesTest
+                  I18nBackendTranslateTest
+                  I18nBackendLookupTest
+                  I18nBackendPluralizeTest
+                  I18nBackendInterpolateTest
+                  I18nBackendLocalizeDateTest
+                  I18nBackendLocalizeDateTimeTest
+                  I18nBackendLocalizeTimeTest
+                  I18nBackendHelperMethodsTest
+                  I18nBackendLoadTranslationsTest
+                  I18nBackendLoadPathTest
+                  I18nBackendReloadTranslationsTest)
+                  
+test_cases = test_modules.map do |test_module|
+  %w(Simple Fast).map do |backend_type|
+    Class.new(Test::Unit::TestCase) do
+      
+      class_eval <<-RUBY_EVAL, __FILE__, __LINE__
+        def new_backend
+          I18n::Backend::#{backend_type}.new
+        end
+      RUBY_EVAL
+      
+      include I18nBackendTestSetup
+      include Object.const_get(test_module)
+    end
+  end
+end
+    
+    

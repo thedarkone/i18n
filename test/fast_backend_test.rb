@@ -14,3 +14,9 @@ class FlatteningHashTest < Test::Unit::TestCase
                   I18n::Backend::Fast.new.send(:flatten_hash, {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}}))
   end
 end
+
+c = Class.new(Test::Unit::TestCase) do
+  def test_a
+    puts 'a'
+  end
+end
