@@ -8,10 +8,10 @@ require 'i18n'
 require 'time'
 require 'yaml'
 
-module I18nSimpleBackendTestSetup
+module I18nBackendTestSetup
   def setup_backend
     # backend_reset_translations!
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     @backend.store_translations 'en', :foo => {:bar => 'bar', :baz => 'baz'}
     @locale_dir = File.dirname(__FILE__) + '/locale'
   end
@@ -98,6 +98,14 @@ module I18nSimpleBackendTestSetup
   end
 end
 
+module I18nSimpleBackendTestSetup
+  include I18nBackendTestSetup
+  
+  def new_backend
+    I18n::Backend::Fast.new
+  end
+end
+
 class I18nSimpleBackendTranslationsTest < Test::Unit::TestCase
   include I18nSimpleBackendTestSetup
 
@@ -125,8 +133,10 @@ class I18nSimpleBackendTranslationsTest < Test::Unit::TestCase
 end
 
 class I18nSimpleBackendAvailableLocalesTest < Test::Unit::TestCase
+  include I18nSimpleBackendTestSetup
+  
   def test_available_locales
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     @backend.store_translations 'de', :foo => 'bar'
     @backend.store_translations 'en', :foo => 'foo'
 
@@ -310,7 +320,7 @@ class I18nSimpleBackendLocalizeDateTest < Test::Unit::TestCase
   include I18nSimpleBackendTestSetup
 
   def setup
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     add_datetime_translations
     @date = Date.new 2008, 1, 1
   end
@@ -364,7 +374,7 @@ class I18nSimpleBackendLocalizeDateTimeTest < Test::Unit::TestCase
   include I18nSimpleBackendTestSetup
 
   def setup
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     add_datetime_translations
     @morning = DateTime.new 2008, 1, 1, 6
     @evening = DateTime.new 2008, 1, 1, 18
@@ -417,7 +427,7 @@ class I18nSimpleBackendLocalizeTimeTest < Test::Unit::TestCase
 
   def setup
     @old_timezone, ENV['TZ'] = ENV['TZ'], 'UTC'
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     add_datetime_translations
     @morning = Time.parse '2008-01-01 6:00 UTC'
     @evening = Time.parse '2008-01-01 18:00 UTC'
@@ -471,10 +481,8 @@ class I18nSimpleBackendLocalizeTimeTest < Test::Unit::TestCase
 end
 
 class I18nSimpleBackendHelperMethodsTest < Test::Unit::TestCase
-  def setup
-    @backend = I18n::Backend::Simple.new
-  end
-
+  include I18nSimpleBackendTestSetup
+  
   def test_deep_symbolize_keys_works
     result = @backend.send :deep_symbolize_keys, 'foo' => {'bar' => {'baz' => 'bar'}}
     expected = {:foo => {:bar => {:baz => 'bar'}}}
@@ -504,7 +512,7 @@ class I18nSimpleBackendLoadTranslationsTest < Test::Unit::TestCase
   end
 
   def test_load_translations_loads_from_different_file_formats
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     @backend.load_translations "#{@locale_dir}/en.rb", "#{@locale_dir}/en.yml"
     expected = {
       :'en-Ruby' => {:foo => {:bar => "baz"}},
@@ -522,7 +530,7 @@ class I18nSimpleBackendLoadPathTest < Test::Unit::TestCase
   end
 
   def test_nested_load_paths_do_not_break_locale_loading
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     I18n.load_path = [[File.dirname(__FILE__) + '/locale/en.yml']]
     assert_nil backend_get_translations
     assert_nothing_raised { @backend.send :init_translations }
@@ -530,7 +538,7 @@ class I18nSimpleBackendLoadPathTest < Test::Unit::TestCase
   end
 
   def test_adding_arrays_of_filenames_to_load_path_do_not_break_locale_loading
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     I18n.load_path << Dir[File.dirname(__FILE__) + '/locale/*.{rb,yml}']
     assert_nil backend_get_translations
     assert_nothing_raised { @backend.send :init_translations }
@@ -542,7 +550,7 @@ class I18nSimpleBackendReloadTranslationsTest < Test::Unit::TestCase
   include I18nSimpleBackendTestSetup
   
   def setup
-    @backend = I18n::Backend::Simple.new
+    @backend = new_backend
     I18n.load_path = [File.dirname(__FILE__) + '/locale/en.yml']
     assert_nil backend_get_translations
     @backend.send :init_translations

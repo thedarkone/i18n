@@ -6,6 +6,7 @@
 # Copyright:: Copyright (c) 2008 The Ruby i18n Team
 # License::   MIT
 require 'i18n/backend/simple'
+require 'i18n/backend/fast'
 require 'i18n/exceptions'
 
 module I18n
