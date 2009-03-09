@@ -13,7 +13,7 @@ module I18n
     attr_reader :locale, :key, :options
     def initialize(locale, key, options)
       @key, @locale, @options = key, locale, options
-      keys = I18n.send(:normalize_translation_keys, locale, key, options[:scope])
+      keys = I18n.send(:normalize_translation_keys, locale, key, options && options[:scope])
       keys << 'no key' if keys.size < 2
       super "translation missing: #{keys.join(', ')}"
     end
@@ -31,7 +31,7 @@ module I18n
     attr_reader :key, :string
     def initialize(key, string)
       @key, @string = key, string
-      super "interpolation argument #{key} missing in #{string.inspect}"
+      super "interpolation argument #{key.inspect} missing in #{string.inspect}"
     end
   end
 

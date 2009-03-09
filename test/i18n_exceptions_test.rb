@@ -6,7 +6,7 @@ require 'mocha'
 require 'i18n'
 require 'active_support'
 
-class I18nExceptionsTest < Test::Unit::TestCase
+module I18nExceptionsTest
   def test_invalid_locale_stores_locale
     force_invalid_locale
   rescue I18n::ArgumentError => e
@@ -50,27 +50,27 @@ class I18nExceptionsTest < Test::Unit::TestCase
   def test_missing_interpolation_argument_stores_key_and_string
     force_missing_interpolation_argument
   rescue I18n::ArgumentError => e
-    assert_equal 'bar', e.key
+    assert_equal :bar, e.key
     assert_equal "{{bar}}", e.string
   end
 
   def test_missing_interpolation_argument_message
     force_missing_interpolation_argument
   rescue I18n::ArgumentError => e
-    assert_equal 'interpolation argument bar missing in "{{bar}}"', e.message
+    assert_equal 'interpolation argument :bar missing in "{{bar}}"', e.message
   end
 
   def test_reserved_interpolation_key_stores_key_and_string
     force_reserved_interpolation_key
   rescue I18n::ArgumentError => e
-    assert_equal 'scope', e.key
+    assert_equal :scope, e.key
     assert_equal "{{scope}}", e.string
   end
 
   def test_reserved_interpolation_key_message
     force_reserved_interpolation_key
   rescue I18n::ArgumentError => e
-    assert_equal 'reserved key "scope" used in "{{scope}}"', e.message
+    assert_equal 'reserved key :scope used in "{{scope}}"', e.message
   end
 
   private
@@ -97,4 +97,20 @@ class I18nExceptionsTest < Test::Unit::TestCase
       I18n.backend.store_translations 'de', :foo => "{{scope}}"
       I18n.backend.translate 'de', :foo, :baz => 'baz'
     end
+end
+
+class I18nSimpleBackendExceptionsTest < Test::Unit::TestCase
+  include I18nExceptionsTest
+
+  def setup
+    I18n.backend = I18n::Backend::Simple.new
+  end
+end
+
+class I18nFastBackendExceptionsTest < Test::Unit::TestCase
+  include I18nExceptionsTest
+
+  def setup
+    I18n.backend = I18n::Backend::Fast.new
+  end
 end

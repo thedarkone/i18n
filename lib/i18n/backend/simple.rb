@@ -3,8 +3,10 @@ require 'yaml'
 module I18n
   module Backend
     class Simple
-      INTERPOLATION_RESERVED_KEYS = %w(scope default)
-      MATCH = /(\\\\)?\{\{([^\}]+)\}\}/
+      INTERPOLATION_RESERVED_KEYS = [:scope, :default]
+      MATCH = /(\\\\)?(\{\{([^\}]+)\}\})/
+      # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
+      DEEP_MERGE_PROC = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &DEEP_MERGE_PROC) : v2 }
 
       # Accepts a list of paths to translation files. Loads translations from
       # plain Ruby (*.rb) or YAML files (*.yml). See #load_rb and #load_yml
@@ -21,25 +23,21 @@ module I18n
         merge_translations(locale, data)
       end
 
-      def translate(locale, key, options = {})
-        raise InvalidLocale.new(locale) if locale.nil?
-        return key.map { |k| translate(locale, k, options) } if key.is_a? Array
-
-        reserved = :scope, :default
-        count, scope, default = options.values_at(:count, *reserved)
-        options.delete(:default)
-        values = options.reject { |name, value| reserved.include?(name) }
-
-        entry = lookup(locale, key, scope)
-        if entry.nil?
-          entry = default(locale, default, options)
-          if entry.nil?
-            raise(I18n::MissingTranslationData.new(locale, key, options))
+      def translate(locale, key, opts = {})
+        raise InvalidLocale.new(locale) unless locale
+        return key.map { |k| translate(locale, k, opts) } if key.is_a? Array
+        
+        if opts
+          count, scope = opts.values_at(:count, :scope)
+          
+          if entry = send(count ? :lookup_with_count : :lookup, locale, key, scope) || ((default = opts.delete(:default)) && default(locale, default, opts))
+            entry = pluralize(locale, entry, count) if count
+            entry = interpolate(entry, opts)
+            entry
           end
-        end
-        entry = pluralize(locale, entry, count)
-        entry = interpolate(locale, entry, values)
-        entry
+        else
+          lookup(locale, key)
+        end || raise(I18n::MissingTranslationData.new(locale, key, opts))
       end
 
       # Acts the same as +strftime+, but returns a localized version of the
@@ -48,12 +46,7 @@ module I18n
       def localize(locale, object, format = :default)
         raise ArgumentError, "Object must be a Date, DateTime or Time object. #{object.inspect} given." unless object.respond_to?(:strftime)
 
-        type = object.respond_to?(:sec) ? 'time' : 'date'
-        # TODO only translate these if format is a String?
-        formats = translate(locale, :"#{type}.formats")
-        format = formats[format.to_sym] if formats && formats[format.to_sym]
-        # TODO raise exception unless format found?
-        format = format.to_s.dup
+        format = decide_on_localization_format(locale, object, format)
 
         # TODO only translate these if the format string is actually present
         # TODO check which format strings are present, then bulk translate then, then replace them
@@ -90,6 +83,12 @@ module I18n
           @translations ||= {}
         end
 
+        def decide_on_localization_format(locale, object, format)
+          type = object.respond_to?(:sec) ? 'time' : 'date'
+          # TODO raise exception unless format found?
+          lookup(locale, :"#{type}.formats.#{format}") || format.to_s.dup
+        end
+
         # Looks up a translation from the translations hash. Returns nil if
         # eiher key is nil, or locale, scope or key do not exist as a key in the
         # nested translations hash. Splits keys or scopes containing dots
@@ -107,6 +106,7 @@ module I18n
             end
           end
         end
+        alias lookup_with_count lookup
 
         # Evaluates a default translation.
         # If the given default is a String it is used literally. If it is a Symbol
@@ -148,18 +148,18 @@ module I18n
         # Note that you have to double escape the <tt>\\</tt> when you want to escape
         # the <tt>{{...}}</tt> key in a string (once for the string and once for the
         # interpolation).
-        def interpolate(locale, string, values = {})
+        def interpolate(string, values = {})
           return string unless string.is_a?(String)
 
           string.gsub(MATCH) do
-            escaped, pattern, key = $1, $2, $2.to_sym
+            escaped, pattern, key = $1, $2, $3.to_sym
 
             if escaped
               pattern
-            elsif INTERPOLATION_RESERVED_KEYS.include?(pattern)
-              raise ReservedInterpolationKey.new(pattern, string)
+            elsif INTERPOLATION_RESERVED_KEYS.include?(key)
+              raise ReservedInterpolationKey.new(key, string)
             elsif !values.include?(key)
-              raise MissingInterpolationArgument.new(pattern, string)
+              raise MissingInterpolationArgument.new(key, string)
             else
               values[key].to_s
             end
@@ -196,18 +196,16 @@ module I18n
           translations[locale] ||= {}
           data = deep_symbolize_keys(data)
 
-          # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
-          merger = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
-          translations[locale].merge!(data, &merger)
+          translations[locale].merge!(data, &DEEP_MERGE_PROC)
         end
 
         # Return a new hash with all keys and nested keys converted to symbols.
         def deep_symbolize_keys(hash)
-          hash.inject({}) { |result, (key, value)|
+          hash.inject({}) do |result, (key, value)|
             value = deep_symbolize_keys(value) if value.is_a? Hash
             result[(key.to_sym rescue key) || key] = value
             result
-          }
+          end
         end
     end
   end

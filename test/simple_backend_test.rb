@@ -161,17 +161,17 @@ module I18nBackendTranslateTest
   end
 
   def test_translate_calls_pluralize
-    @backend.expects(:pluralize).with 'en', 'bar', 1
+    @backend.expects(:pluralize).with('en', 'bar', 1).returns('pluralized')
     @backend.translate 'en', :bar, :scope => [:foo], :count => 1
   end
 
   def test_translate_calls_interpolate
-    @backend.expects(:interpolate).with 'en', 'bar', {}
+    @backend.expects(:interpolate).returns('interpolated')
     @backend.translate 'en', :bar, :scope => [:foo]
   end
 
   def test_translate_calls_interpolate_including_count_as_a_value
-    @backend.expects(:interpolate).with 'en', 'bar', {:count => 1}
+    @backend.expects(:interpolate).returns('interpolated')
     @backend.translate 'en', :bar, :scope => [:foo], :count => 1
   end
 
@@ -235,58 +235,63 @@ module I18nBackendPluralizeTest
 end
 
 module I18nBackendInterpolateTest
+  def interpolate_on_backend(str, values)
+    @backend.send(:compile_if_an_interpolation, str) if @backend.respond_to?(:compile_if_an_interpolation)
+    @backend.send(:interpolate, str, values)
+  end
+  
   def test_interpolate_given_a_value_hash_interpolates_the_values_to_the_string
-    assert_equal 'Hi David!', @backend.send(:interpolate, nil, 'Hi {{name}}!', :name => 'David')
+    assert_equal 'Hi David!', interpolate_on_backend('Hi {{name}}!', :name => 'David')
   end
 
   def test_interpolate_given_a_value_hash_interpolates_into_unicode_string
-    assert_equal 'Häi David!', @backend.send(:interpolate, nil, 'Häi {{name}}!', :name => 'David')
+    assert_equal 'Häi David!', interpolate_on_backend('Häi {{name}}!', :name => 'David')
   end
 
   def test_interpolate_given_an_unicode_value_hash_interpolates_to_the_string
-    assert_equal 'Hi ゆきひろ!', @backend.send(:interpolate, nil, 'Hi {{name}}!', :name => 'ゆきひろ')
+    assert_equal 'Hi ゆきひろ!', interpolate_on_backend('Hi {{name}}!', :name => 'ゆきひろ')
   end
 
   def test_interpolate_given_an_unicode_value_hash_interpolates_into_unicode_string
-    assert_equal 'こんにちは、ゆきひろさん!', @backend.send(:interpolate, nil, 'こんにちは、{{name}}さん!', :name => 'ゆきひろ')
+    assert_equal 'こんにちは、ゆきひろさん!', interpolate_on_backend('こんにちは、{{name}}さん!', :name => 'ゆきひろ')
   end
 
   if Kernel.const_defined?(:Encoding)
     def test_interpolate_given_a_non_unicode_multibyte_value_hash_interpolates_into_a_string_with_the_same_encoding
-      assert_equal euc_jp('Hi ゆきひろ!'), @backend.send(:interpolate, nil, 'Hi {{name}}!', :name => euc_jp('ゆきひろ'))
+      assert_equal euc_jp('Hi ゆきひろ!'), interpolate_on_backend('Hi {{name}}!', :name => euc_jp('ゆきひろ'))
     end
 
     def test_interpolate_given_an_unicode_value_hash_into_a_non_unicode_multibyte_string_raises_encoding_compatibility_error
       assert_raises(Encoding::CompatibilityError) do
-        @backend.send(:interpolate, nil, euc_jp('こんにちは、{{name}}さん!'), :name => 'ゆきひろ')
+        interpolate_on_backend(euc_jp('こんにちは、{{name}}さん!'), :name => 'ゆきひろ')
       end
     end
 
     def test_interpolate_given_a_non_unicode_multibyte_value_hash_into_an_unicode_string_raises_encoding_compatibility_error
       assert_raises(Encoding::CompatibilityError) do
-        @backend.send(:interpolate, nil, 'こんにちは、{{name}}さん!', :name => euc_jp('ゆきひろ'))
+        interpolate_on_backend('こんにちは、{{name}}さん!', :name => euc_jp('ゆきひろ'))
       end
     end
   end
 
   def test_interpolate_given_nil_as_a_string_returns_nil
-    assert_nil @backend.send(:interpolate, nil, nil, :name => 'David')
+    assert_nil interpolate_on_backend(nil, :name => 'David')
   end
 
   def test_interpolate_given_an_non_string_as_a_string_returns_nil
-    assert_equal [], @backend.send(:interpolate, nil, [], :name => 'David')
+    assert_equal [], interpolate_on_backend([], :name => 'David')
   end
 
   def test_interpolate_given_a_values_hash_with_nil_values_interpolates_the_string
-    assert_equal 'Hi !', @backend.send(:interpolate, nil, 'Hi {{name}}!', {:name => nil})
+    assert_equal 'Hi !', interpolate_on_backend('Hi {{name}}!', {:name => nil})
   end
 
   def test_interpolate_given_an_empty_values_hash_raises_missing_interpolation_argument
-    assert_raises(I18n::MissingInterpolationArgument) { @backend.send(:interpolate, nil, 'Hi {{name}}!', {}) }
+    assert_raises(I18n::MissingInterpolationArgument) { interpolate_on_backend('Hi {{name}}!', {}) }
   end
 
   def test_interpolate_given_a_string_containing_a_reserved_key_raises_reserved_interpolation_key
-    assert_raises(I18n::ReservedInterpolationKey) { @backend.send(:interpolate, nil, '{{default}}', {:default => nil}) }
+    assert_raises(I18n::ReservedInterpolationKey) { interpolate_on_backend('{{default}}', {:default => nil}) }
   end
   
   private
@@ -521,20 +526,20 @@ module I18nBackendReloadTranslationsTest
     assert_nil backend_get_translations
     @backend.send :init_translations
   end
-  
+
   def teardown
     I18n.load_path = []
   end
-  
+
   def test_setup
     assert_not_nil backend_get_translations
   end
-  
+
   def test_reload_translations_unloads_translations
     @backend.reload!
     assert_nil backend_get_translations
   end
-  
+
   def test_reload_translations_uninitializes_translations
     @backend.reload!
     assert_equal @backend.initialized?, false
@@ -554,21 +559,19 @@ test_modules = %w(I18nBackendTranslationsTest
                   I18nBackendLoadTranslationsTest
                   I18nBackendLoadPathTest
                   I18nBackendReloadTranslationsTest)
-                  
+
 test_cases = test_modules.map do |test_module|
   %w(Simple Fast).map do |backend_type|
     Class.new(Test::Unit::TestCase) do
-      
+
       class_eval <<-RUBY_EVAL, __FILE__, __LINE__
         def new_backend
           I18n::Backend::#{backend_type}.new
         end
       RUBY_EVAL
-      
+
       include I18nBackendTestSetup
       include Object.const_get(test_module)
     end
   end
 end
-    
-    
