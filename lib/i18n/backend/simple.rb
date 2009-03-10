@@ -23,7 +23,7 @@ module I18n
         merge_translations(locale, data)
       end
 
-      def translate(locale, key, opts = {})
+      def translate(locale, key, opts = nil)
         raise InvalidLocale.new(locale) unless locale
         return key.map { |k| translate(locale, k, opts) } if key.is_a? Array
         

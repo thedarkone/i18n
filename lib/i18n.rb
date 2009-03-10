@@ -161,12 +161,12 @@ module I18n
     #
     # Which is the same as using a scope option:
     #   I18n.t [:foo, :bar], :scope => :baz
-    def translate(key, options = {})
-      locale = options.delete(:locale) || I18n.locale
+    def translate(key, options = nil)
+      locale = (options && options.delete(:locale)) || I18n.locale
       backend.translate(locale, key, options)
     rescue I18n::ArgumentError => e
-      raise e if options[:raise]
-      send(@@exception_handler, e, locale, key, options)
+      raise e if options && options[:raise]
+      send(@@exception_handler, e, locale, key, options || {})
     end
     alias :t :translate
 
