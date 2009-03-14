@@ -7,6 +7,7 @@
 # License::   MIT
 require 'i18n/backend/simple'
 require 'i18n/backend/fast'
+require 'i18n/backend/fast/pluralization_compiler'
 require 'i18n/exceptions'
 
 module I18n

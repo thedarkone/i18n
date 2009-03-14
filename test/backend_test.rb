@@ -236,7 +236,7 @@ end
 
 module I18nBackendInterpolateTest
   def interpolate_on_backend(str, values)
-    @backend.send(:compile_if_an_interpolation, str) if @backend.respond_to?(:compile_if_an_interpolation)
+    I18n::Backend::Fast::PluralizationCompiler.compile_if_an_interpolation(str) if @backend.kind_of?(I18n::Backend::Fast)
     @backend.send(:interpolate, str, values)
   end
   

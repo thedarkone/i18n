@@ -13,10 +13,6 @@ class FastBackendTest < Test::Unit::TestCase
     @backend = I18n::Backend::Fast.new
   end
 
-  def assert_escapes(expected, malicious_str)
-    assert_equal(expected, @backend.send(:escape_key_sym, malicious_str))
-  end
-
   def assert_flattens(expected, nested)
     assert_equal expected, @backend.send(:flatten_hash, nested)
   end
@@ -30,30 +26,9 @@ class FastBackendTest < Test::Unit::TestCase
     assert_flattens({:'a.b.one'=>'one', :'a.b'=>{:one => 'one'}}, {:a=>{:b=>{:one => 'one'}}})
   end
 
-  def test_escape_key_properly_escapes
-    assert_escapes ':"\""',       '"'
-    assert_escapes ':"\\\\"',     '\\'
-    assert_escapes ':"\\\\\""',   '\\"'
-    assert_escapes ':"\#{}"',     '#{}'
-    assert_escapes ':"\\\\\#{}"', '\#{}'
-  end
-
   def test_pluralization_logic_and_lookup_works
     counts_hash = {:zero => 'zero', :one => 'one', :other => 'other'}
     @backend.store_translations :en, {:a => counts_hash}
     assert_equal 'one', @backend.translate(:en, :a, :count => 1)
-  end
-
-  def test_non_interpolated_strings_or_arrays_dont_get_compiled
-    ['abc', '\\\\{{a}}', []].each do |obj|
-      @backend.send(:compile_if_an_interpolation, obj)
-      assert_equal false, obj.respond_to?(:i18n_interpolate)
-    end
-  end
-
-  def test_interpolated_string_gets_compiled
-    str = '-{{a}}-'
-    @backend.send(:compile_if_an_interpolation, str)
-    assert_equal '-A-', str.i18n_interpolate(:a => 'A')
   end
 end
