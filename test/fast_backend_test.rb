@@ -26,6 +26,10 @@ class FastBackendTest < Test::Unit::TestCase
     assert_flattens( {:"a.b"=>['a', 'b']}, {:a=>{:b =>['a', 'b']}} )
   end
 
+  def test_hash_flattening_preserves_pluralization_hashes
+    assert_flattens({:'a.b.one'=>'one', :'a.b'=>{:one => 'one'}}, {:a=>{:b=>{:one => 'one'}}})
+  end
+
   def test_escape_key_properly_escapes
     assert_escapes ':"\""',       '"'
     assert_escapes ':"\\\\"',     '\\'
@@ -34,11 +38,9 @@ class FastBackendTest < Test::Unit::TestCase
     assert_escapes ':"\\\\\#{}"', '\#{}'
   end
 
-  def test_uses_simple_backends_pluralization_logic_and_lookup
+  def test_pluralization_logic_and_lookup_works
     counts_hash = {:zero => 'zero', :one => 'one', :other => 'other'}
     @backend.store_translations :en, {:a => counts_hash}
-    @backend.expects(:lookup).never
-    @backend.expects(:lookup_with_count).returns(counts_hash)
     assert_equal 'one', @backend.translate(:en, :a, :count => 1)
   end
 

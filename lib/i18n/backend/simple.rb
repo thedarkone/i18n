@@ -30,7 +30,7 @@ module I18n
         if opts
           count, scope = opts.values_at(:count, :scope)
           
-          if entry = send(count ? :lookup_with_count : :lookup, locale, key, scope) || ((default = opts.delete(:default)) && default(locale, default, opts))
+          if entry = lookup(locale, key, scope) || ((default = opts.delete(:default)) && default(locale, default, opts))
             entry = pluralize(locale, entry, count) if count
             entry = interpolate(entry, opts)
             entry
