@@ -536,13 +536,68 @@ module I18nBackendReloadTranslationsTest
   end
 
   def test_reload_translations_unloads_translations
+    @backend.expects(:stale?).returns(true)
     @backend.reload!
     assert_nil backend_get_translations
   end
 
   def test_reload_translations_uninitializes_translations
+    @backend.expects(:stale?).returns(true)
     @backend.reload!
     assert_equal @backend.initialized?, false
+  end
+end
+
+module I18nBackendLazyReloadingTest
+  def locale_fixture_path(file)
+    File.join(File.dirname(__FILE__), 'locale', file)
+  end
+
+  def trigger_reload
+    @backend.reload!
+    @backend.available_locales
+  end
+
+  def assert_triggers_translations_reload
+    yield
+    @backend.expects(:init_translations)
+    trigger_reload
+  end
+
+  def assert_does_not_trigger_translations_reload
+    yield
+    @backend.expects(:init_translations).never
+    trigger_reload
+  end
+
+  def setup
+    @backend = new_backend
+    I18n.load_path = [locale_fixture_path('en.yml')]
+    @backend.send(:init_translations)
+  end
+
+  def test_does_not_perform_reload_if_translation_files_are_not_updated
+    assert_does_not_trigger_translations_reload do
+      @backend.reload!
+    end
+  end
+
+  def test_performs_reload_if_new_translation_is_added
+    assert_triggers_translations_reload do
+      I18n.load_path << locale_fixture_path('en.rb')
+    end
+  end
+
+  def test_performs_reload_if_translation_is_removed
+    assert_triggers_translations_reload do
+      I18n.load_path.clear
+    end
+  end
+
+  def test_performs_reload_if_translation_file_is_updated
+    assert_triggers_translations_reload do
+      File.expects(:mtime).with(I18n.load_path.first).returns(Time.now - 10)
+    end
   end
 end
 
@@ -558,7 +613,8 @@ test_modules = %w(I18nBackendTranslationsTest
                   I18nBackendHelperMethodsTest
                   I18nBackendLoadTranslationsTest
                   I18nBackendLoadPathTest
-                  I18nBackendReloadTranslationsTest)
+                  I18nBackendReloadTranslationsTest
+                  I18nBackendLazyReloadingTest)
 
 test_cases = test_modules.map do |test_module|
   %w(Simple Fast).map do |backend_type|

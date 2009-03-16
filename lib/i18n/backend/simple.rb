@@ -69,14 +69,27 @@ module I18n
       end
 
       def reload!
-        @initialized = false
-        @translations = nil
+        flush_translations if stale?
+      end
+
+      def stale?
+        translation_path_removed? || translation_file_updated_or_added?
       end
 
       protected
         def init_translations
-          load_translations(*I18n.load_path.flatten)
+          load_translations(*load_paths)
           @initialized = true
+        end
+
+        def flush_translations
+          @initialized = false
+          @translations = nil
+          @file_mtimes = {}
+        end
+
+        def load_paths
+          I18n.load_path.flatten
         end
 
         def translations
@@ -173,8 +186,29 @@ module I18n
         def load_file(filename)
           type = File.extname(filename).tr('.', '').downcase
           raise UnknownFileType.new(type, filename) unless respond_to?(:"load_#{type}")
+          record_mtime_of(filename)
           data = send :"load_#{type}", filename # TODO raise a meaningful exception if this does not yield a Hash
           data.each { |locale, d| merge_translations(locale, d) }
+        end
+
+        def record_mtime_of(filename)
+          file_mtimes[filename] = File.mtime(filename)
+        end
+
+        def stale_translation_file?(filename)
+          (mtime = file_mtimes[filename]).nil? || !File.file?(filename) || mtime < File.mtime(filename)
+        end
+
+        def file_mtimes
+          @file_mtimes ||= {}
+        end
+
+        def translation_path_removed?
+          (file_mtimes.keys - load_paths).any?
+        end
+
+        def translation_file_updated_or_added?
+          load_paths.any? {|path| stale_translation_file?(path)}
         end
 
         # Loads a plain Ruby translations file. eval'ing the file must yield
