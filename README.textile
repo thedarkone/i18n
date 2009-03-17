@@ -4,6 +4,19 @@ I18n and localization solution for Ruby.
 
 For information please refer to http://rails-i18n.org
 
+h2. Fast backend
+
+This fork includes a @Fast@ backend that optimizes for the most common lookups and makes them about 20x (for @t(:'foo.bar.baz')@) or 6x (for @t(:'foo.bar.baz', :a=>'A', :b=>'B')@) times faster than the original @Simple@ backend. The @Fast@ backend is slightly less memory efficient and is slower to @reload!@, but should be a great choice for production environment.
+
+h3. Usage
+
+Clone the repo as a plugin into your Rails app.
+
+<pre>
+  # in initializer or enviroment.rb
+  I18n.backend = I18n::Backend::Fast.new
+</pre>
+
 h2. Authors
 
 * "Matt Aimonetti":http://railsontherun.com
@@ -11,10 +24,8 @@ h2. Authors
 * "Joshua Harvey":http://www.workingwithrails.com/person/759-joshua-harvey
 * "Saimon Moore":http://saimonmoore.net
 * "Stephan Soller":http://www.arkanis-development.de
+* "thedarkone":http://github.com/thedarkone
 
 h2. License
 
 MIT License. See the included MIT-LICENCE file.
-
-
-
