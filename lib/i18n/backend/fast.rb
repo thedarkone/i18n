@@ -2,9 +2,6 @@ module I18n
   module Backend
     class Fast < Simple
 
-      # append any your custom pluralization keys to the constant
-      PLURALIZATION_KEYS = [:zero, :one, :other]
-
       def reset_flattened_translations!
         @flattened_translations = nil
       end
@@ -24,19 +21,13 @@ module I18n
       end
 
       protected
-        # {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}} => {:"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d", :a=>"a"}
+        # flatten_hash({:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}}) 
+        # # => {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}, :"b.f" => {:x=>"x"}, :"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d"}
         def flatten_hash(h, nested_stack = [], flattened_h = {})
           h.each_pair do |k, v|
             new_nested_stack = nested_stack + [k]
-
-            if v.kind_of?(Hash)
-              # short circuit pluralization hashes
-              flattened_h[nested_stack_to_flat_key(new_nested_stack)] = v if (v.keys & PLURALIZATION_KEYS).any?
-
-              flatten_hash(v, new_nested_stack, flattened_h)
-            else
-              flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
-            end
+            flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
+            flatten_hash(v, new_nested_stack, flattened_h) if v.kind_of?(Hash)
           end
 
           flattened_h
@@ -60,9 +51,7 @@ module I18n
 
         def lookup(locale, key, scope = nil)
           init_translations unless @initialized
-          # We have to try calling super if no translation is found because Rails helpers rely on being able to access arbitrary translation subtrees.
-          # This is *slow* and goes against pretty much all the Fast backend is meant to stand for :(.
-          (flattened_translations[locale.to_sym][(scope ? "#{Array(scope).join('.')}.#{key}" : key).to_sym] rescue nil) || super
+          flattened_translations[locale.to_sym][(scope ? "#{Array(scope).join('.')}.#{key}" : key).to_sym] rescue nil
         end
     end
   end
