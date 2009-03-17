@@ -2,9 +2,6 @@ module I18n
   module Backend
     class Fast < Simple
 
-      # append any your custom pluralization keys to the constant
-      PLURALIZATION_KEYS = [:zero, :one, :other]
-
       def reset_flattened_translations!
         @flattened_translations = nil
       end
@@ -28,15 +25,8 @@ module I18n
         def flatten_hash(h, nested_stack = [], flattened_h = {})
           h.each_pair do |k, v|
             new_nested_stack = nested_stack + [k]
-
-            if v.kind_of?(Hash)
-              # short circuit pluralization hashes
-              flattened_h[nested_stack_to_flat_key(new_nested_stack)] = v if (v.keys & PLURALIZATION_KEYS).any?
-
-              flatten_hash(v, new_nested_stack, flattened_h)
-            else
-              flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
-            end
+            flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
+            flatten_hash(v, new_nested_stack, flattened_h) if v.kind_of?(Hash)
           end
 
           flattened_h

@@ -18,12 +18,11 @@ class FastBackendTest < Test::Unit::TestCase
   end
 
   def test_hash_flattening_works
-    assert_flattens( {:"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d", :a=>"a"}, {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}} )
-    assert_flattens( {:"a.b"=>['a', 'b']}, {:a=>{:b =>['a', 'b']}} )
-  end
-
-  def test_hash_flattening_preserves_pluralization_hashes
-    assert_flattens({:'a.b.one'=>'one', :'a.b'=>{:one => 'one'}}, {:a=>{:b=>{:one => 'one'}}})
+    assert_flattens(
+      {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}, :"b.f" => {:x=>"x"}, :"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d"},
+      {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}}
+    )
+    assert_flattens({:a=>{:b =>['a', 'b']}, :"a.b"=>['a', 'b']}, {:a=>{:b =>['a', 'b']}})
   end
 
   def test_pluralization_logic_and_lookup_works
