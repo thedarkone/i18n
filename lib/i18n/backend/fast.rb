@@ -60,7 +60,9 @@ module I18n
 
         def lookup(locale, key, scope = nil)
           init_translations unless @initialized
-          flattened_translations[locale.to_sym][(scope ? "#{Array(scope).join('.')}.#{key}" : key).to_sym] rescue nil
+          # We have to try calling super if no translation is found because Rails helpers rely on being able to access arbitrary translation subtrees.
+          # This is *slow* and goes against pretty much all the Fast backend is meant to stand for :(.
+          (flattened_translations[locale.to_sym][(scope ? "#{Array(scope).join('.')}.#{key}" : key).to_sym] rescue nil) || super
         end
     end
   end

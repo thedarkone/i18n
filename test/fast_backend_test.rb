@@ -31,4 +31,9 @@ class FastBackendTest < Test::Unit::TestCase
     @backend.store_translations :en, {:a => counts_hash}
     assert_equal 'one', @backend.translate(:en, :a, :count => 1)
   end
+
+  def test_translation_subtree_retrieval
+    @backend.store_translations :en, :a => {:foo => 'bar'}
+    assert_equal({:foo => 'bar'}, @backend.translate(:en, :a))
+  end
 end
