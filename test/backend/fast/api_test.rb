@@ -23,17 +23,7 @@ class I18nFastBackendApiTranslateTest < Test::Unit::TestCase
   end
 
   def test_translate_calls_pluralize
-    I18n.backend.expects(:pluralize).with 'en', 'bar', 1
-    I18n.backend.translate 'en', :bar, :scope => [:foo], :count => 1
-  end
-
-  def test_translate_calls_interpolate
-    I18n.backend.expects(:interpolate).with 'en', 'bar', {}
-    I18n.backend.translate 'en', :bar, :scope => [:foo]
-  end
-
-  def test_translate_calls_interpolate_including_count_as_a_value
-    I18n.backend.expects(:interpolate).with 'en', 'bar', {:count => 1}
+    I18n.backend.expects(:pluralize).with('en', 'bar', 1).returns('bar')
     I18n.backend.translate 'en', :bar, :scope => [:foo], :count => 1
   end
 end

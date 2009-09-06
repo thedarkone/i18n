@@ -22,8 +22,27 @@ module I18n
         super
         reset_flattened_translations!
       end
-
-      # protected
+      
+      def translate(locale, key, opts = nil)
+        raise InvalidLocale.new(locale) unless locale
+        return key.map { |k| translate(locale, k, opts) } if key.is_a?(Array)
+        
+        if opts
+          count = opts[:count]
+          scope = opts[:scope]
+          
+          if entry = lookup(locale, key, scope, opts[:separator]) || ((default = opts.delete(:default)) && default(locale, key, default, opts))
+            entry = resolve(locale, key, entry, opts)
+            entry = pluralize(locale, entry, count) if count
+            entry = interpolate(locale, entry, opts)
+            entry
+          end
+        else
+          resolve(locale, key, lookup(locale, key), opts)
+        end || raise(I18n::MissingTranslationData.new(locale, key, opts))
+      end
+      
+      protected
         # flatten_hash({:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}}) 
         # # => {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}, :"b.f" => {:x=>"x"}, :"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d"}
         def flatten_hash(h, nested_stack = [], flattened_h = {})
