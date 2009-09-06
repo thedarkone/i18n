@@ -1,19 +1,23 @@
+# encoding: utf-8
+
 # Authors::   Matt Aimonetti (http://railsontherun.com/),
 #             Sven Fuchs (http://www.artweb-design.de),
 #             Joshua Harvey (http://www.workingwithrails.com/person/759-joshua-harvey),
 #             Saimon Moore (http://saimonmoore.net),
-#             Stephan Soller (http://www.arkanis-development.de/)
+#             Stephan Soller (http://www.arkanis-development.de/),
+#             thedarkone (http://github.com/thedarkone)
 # Copyright:: Copyright (c) 2008 The Ruby i18n Team
 # License::   MIT
 require 'i18n/backend/simple'
 require 'i18n/backend/fast'
-require 'i18n/backend/fast/pluralization_compiler'
 require 'i18n/exceptions'
+require 'i18n/string'
 
 module I18n
   @@backend = nil
   @@load_path = nil
-  @@default_locale = :'en'
+  @@default_locale = :en
+  @@default_separator = '.'
   @@exception_handler = :default_exception_handler
 
   class << self
@@ -34,7 +38,7 @@ module I18n
 
     # Sets the current default locale. Used to set a custom default locale.
     def default_locale=(locale)
-      @@default_locale = locale
+      @@default_locale = locale.to_sym rescue nil
     end
 
     # Returns the current locale. Defaults to I18n.default_locale.
@@ -44,12 +48,29 @@ module I18n
 
     # Sets the current locale pseudo-globally, i.e. in the Thread.current hash.
     def locale=(locale)
-      Thread.current[:locale] = locale
+      Thread.current[:locale] = locale.to_sym rescue nil
     end
 
-    # Returns an array of locales for which translations are available
+    # Returns an array of locales for which translations are available.
+    # Unless you explicitely set the these through I18n.available_locales=
+    # the call will be delegated to the backend and memoized on the I18n module.
     def available_locales
-      backend.available_locales
+      @@available_locales ||= backend.available_locales
+    end
+
+    # Sets the available locales.
+    def available_locales=(locales)
+      @@available_locales = locales
+    end
+
+    # Returns the current default scope separator. Defaults to '.'
+    def default_separator
+      @@default_separator
+    end
+
+    # Sets the current default scope separator.
+    def default_separator=(separator)
+      @@default_separator = separator
     end
 
     # Sets the exception handler.
@@ -152,7 +173,7 @@ module I18n
     # or <tt>default</tt> if no translations for <tt>:foo</tt> and <tt>:bar</tt> were found.
     #   I18n.t :foo, :default => [:bar, 'default']
     #
-    # <b>BULK LOOKUP</b>
+    # *BULK LOOKUP*
     #
     # This returns an array with the translations for <tt>:foo</tt> and <tt>:bar</tt>.
     #   I18n.t [:foo, :bar]
@@ -162,14 +183,37 @@ module I18n
     #
     # Which is the same as using a scope option:
     #   I18n.t [:foo, :bar], :scope => :baz
-    def translate(key, options = nil)
-      locale = (options && options.delete(:locale)) || I18n.locale
+    #
+    # *LAMBDAS*
+    #
+    # Both translations and defaults can be given as Ruby lambdas. Lambdas will be
+    # called and passed the key and options.
+    #
+    # E.g. assuming the key <tt>:salutation</tt> resolves to:
+    #   lambda { |key, options| options[:gender] == 'm' ? "Mr. {{options[:name]}}" : "Mrs. {{options[:name]}}" }
+    #
+    # Then <tt>I18n.t(:salutation, :gender => 'w', :name => 'Smith') will result in "Mrs. Smith".
+    #
+    # It is recommended to use/implement lambdas in an "idempotent" way. E.g. when
+    # a cache layer is put in front of I18n.translate it will generate a cache key
+    # from the argument values passed to #translate. Therefor your lambdas should
+    # always return the same translations/values per unique combination of argument
+    # values.
+    def translate(*args)
+      options = args.last.is_a?(Hash) ? args.pop : {}
+      key     = args.shift
+      locale  = options.delete(:locale) || I18n.locale
       backend.translate(locale, key, options)
-    rescue I18n::ArgumentError => e
-      raise e if options && options[:raise]
-      send(@@exception_handler, e, locale, key, options || {})
+    rescue I18n::ArgumentError => exception
+      raise exception if options[:raise]
+      handle_exception(exception, locale, key, options)
     end
     alias :t :translate
+
+    def translate!(key, options = {})
+      translate(key, options.merge( :raise => true ))
+    end
+    alias :t! :translate!
 
     # Localizes certain objects, such as dates and numbers to local formatting.
     def localize(object, options = {})
@@ -180,6 +224,7 @@ module I18n
     alias :l :localize
 
   protected
+
     # Handles exceptions raised in the backend. All exceptions except for
     # MissingTranslationData exceptions are re-raised. When a MissingTranslationData
     # was caught and the option :raise is not set the handler returns an error
@@ -189,12 +234,38 @@ module I18n
       raise exception
     end
 
+    # Any exceptions thrown in translate will be sent to the @@exception_handler
+    # which can be a Symbol, a Proc or any other Object.
+    #
+    # If exception_handler is a Symbol then it will simply be sent to I18n as
+    # a method call. A Proc will simply be called. In any other case the
+    # method #call will be called on the exception_handler object.
+    #
+    # Examples:
+    #
+    #   I18n.exception_handler = :default_exception_handler             # this is the default
+    #   I18n.default_exception_handler(exception, locale, key, options) # will be called like this
+    #
+    #   I18n.exception_handler = lambda { |*args| ... }                 # a lambda
+    #   I18n.exception_handler.call(exception, locale, key, options)    # will be called like this
+    #
+    #  I18n.exception_handler = I18nExceptionHandler.new                # an object
+    #  I18n.exception_handler.call(exception, locale, key, options)     # will be called like this
+    def handle_exception(exception, locale, key, options)
+      case @@exception_handler
+      when Symbol
+        send(@@exception_handler, exception, locale, key, options)
+      else
+        @@exception_handler.call(exception, locale, key, options)
+      end
+    end
+
     # Merges the given locale, key and scope into a single array of keys.
     # Splits keys that contain dots into multiple keys. Makes sure all
     # keys are Symbols.
-    def normalize_translation_keys(locale, key, scope)
-      keys = [locale] + Array(scope) + [key]
-      keys = keys.map { |k| k.to_s.split(/\./) }
+    def normalize_translation_keys(locale, key, scope, separator = nil)
+      keys = [locale] + Array(scope) + Array(key)
+      keys = keys.map { |k| k.to_s.split(separator || I18n.default_separator) }
       keys.flatten.map { |k| k.to_sym }
     end
   end

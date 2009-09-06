@@ -1,10 +1,11 @@
 module I18n
   module Backend
-    class Fast < Simple
+    class Fast < Base
       module PluralizationCompiler
         extend self
         
-        TOKENIZER = /(\\\\\{\{[^\}]+\}\}|\{\{[^\}]+\}\})/
+        TOKENIZER                    = /(\\\{\{[^\}]+\}\}|\{\{[^\}]+\}\})/
+        INTERPOLATION_SYNTAX_PATTERN = /(\\)?(\{\{([^\}]+)\}\})/
 
         def compile_if_an_interpolation(string)
           if interpolated_str?(string)
@@ -19,7 +20,7 @@ module I18n
         end
 
         def interpolated_str?(str)
-          str.kind_of?(String) && str =~ Simple::MATCH
+          str.kind_of?(String) && str =~ INTERPOLATION_SYNTAX_PATTERN
         end
 
         protected
@@ -30,7 +31,7 @@ module I18n
 
         def compiled_interpolation_body(str)
           tokenize(str).map do |token|
-            (matchdata = token.match(Simple::MATCH)) ? handle_interpolation_token(token, matchdata) : escape_plain_str(token)
+            (matchdata = token.match(INTERPOLATION_SYNTAX_PATTERN)) ? handle_interpolation_token(token, matchdata) : escape_plain_str(token)
           end.join
         end
 
@@ -41,7 +42,7 @@ module I18n
 
         def compile_interpolation_token(key)
           eskey = escape_key_sym(key)
-          if Simple::INTERPOLATION_RESERVED_KEYS.include?(key)
+          if Base::RESERVED_KEYS.include?(key)
             "\#{raise(ReservedInterpolationKey.new(#{eskey}, self))}"
           else
             "\#{values[#{eskey}] || (values.has_key?(#{eskey}) && values[#{eskey}].to_s) || raise(MissingInterpolationArgument.new(#{eskey}, self))}"

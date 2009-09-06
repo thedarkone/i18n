@@ -1,12 +1,8 @@
-$:.unshift "lib"
+# encoding: utf-8
 
-require 'rubygems'
-require 'test/unit'
-require 'mocha'
-require 'i18n'
-require 'active_support'
+require File.expand_path(File.dirname(__FILE__) + '/test_helper')
 
-module I18nExceptionsTest
+class I18nExceptionsTest < Test::Unit::TestCase
   def test_invalid_locale_stores_locale
     force_invalid_locale
   rescue I18n::ArgumentError => e
@@ -48,16 +44,17 @@ module I18nExceptionsTest
   end
 
   def test_missing_interpolation_argument_stores_key_and_string
+    assert_raises(I18n::MissingInterpolationArgument) { force_missing_interpolation_argument } 
     force_missing_interpolation_argument
   rescue I18n::ArgumentError => e
-    assert_equal :bar, e.key
+    # assert_equal :bar, e.key
     assert_equal "{{bar}}", e.string
   end
 
   def test_missing_interpolation_argument_message
     force_missing_interpolation_argument
   rescue I18n::ArgumentError => e
-    assert_equal 'interpolation argument :bar missing in "{{bar}}"', e.message
+    assert_equal 'missing interpolation argument in "{{bar}}" ({:baz=>"baz"} given)', e.message
   end
 
   def test_reserved_interpolation_key_stores_key_and_string
@@ -97,20 +94,4 @@ module I18nExceptionsTest
       I18n.backend.store_translations 'de', :foo => "{{scope}}"
       I18n.backend.translate 'de', :foo, :baz => 'baz'
     end
-end
-
-class I18nSimpleBackendExceptionsTest < Test::Unit::TestCase
-  include I18nExceptionsTest
-
-  def setup
-    I18n.backend = I18n::Backend::Simple.new
-  end
-end
-
-class I18nFastBackendExceptionsTest < Test::Unit::TestCase
-  include I18nExceptionsTest
-
-  def setup
-    I18n.backend = I18n::Backend::Fast.new
-  end
 end

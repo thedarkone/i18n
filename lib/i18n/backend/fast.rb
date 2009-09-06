@@ -1,6 +1,9 @@
+require 'i18n/backend/fast/pluralization_compiler'
+
 module I18n
   module Backend
-    class Fast < Simple
+    class Fast < Base
+      SEPARATOR_ESCAPE_CHAR = "\001"
 
       def reset_flattened_translations!
         @flattened_translations = nil
@@ -20,21 +23,25 @@ module I18n
         reset_flattened_translations!
       end
 
-      protected
+      # protected
         # flatten_hash({:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}}) 
         # # => {:a=>'a', :b=>{:c=>'c', :d=>'d', :f=>{:x=>'x'}}, :"b.f" => {:x=>"x"}, :"b.c"=>"c", :"b.f.x"=>"x", :"b.d"=>"d"}
         def flatten_hash(h, nested_stack = [], flattened_h = {})
           h.each_pair do |k, v|
-            new_nested_stack = nested_stack + [k]
+            new_nested_stack = nested_stack + [escape_default_separator(k)]
             flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
             flatten_hash(v, new_nested_stack, flattened_h) if v.kind_of?(Hash)
           end
 
           flattened_h
         end
+        
+        def escape_default_separator(key)
+          key.to_s.tr(I18n.default_separator, SEPARATOR_ESCAPE_CHAR)
+        end
 
         def nested_stack_to_flat_key(nested_stack)
-          nested_stack.join('.').to_sym
+          nested_stack.join(I18n.default_separator).to_sym
         end
 
         def flatten_translations(translations)
@@ -44,14 +51,28 @@ module I18n
             flattened_h
           end
         end
-
-        def interpolate(string, values)
-          string.respond_to?(:i18n_interpolate) ? string.i18n_interpolate(values) : string
+        
+        def interpolate(locale, string, values)
+          if string.respond_to?(:i18n_interpolate)
+            string.i18n_interpolate(values)
+          elsif values
+            super
+          else
+            string
+          end
         end
 
-        def lookup(locale, key, scope = nil)
+        def lookup(locale, key, scope = nil, separator = nil)
           init_translations unless @initialized
-          flattened_translations[locale.to_sym][(scope ? "#{Array(scope).join('.')}.#{key}" : key).to_sym] rescue nil
+          if separator
+            key   = cleanup_non_standard_separator(key, separator)
+            scope = Array(scope).map{|k| cleanup_non_standard_separator(k, separator)} if scope
+          end
+          flattened_translations[locale.to_sym][(scope ? (Array(scope) + [key]).join(I18n.default_separator) : key).to_sym] rescue nil
+        end
+        
+        def cleanup_non_standard_separator(key, user_separator)
+          escape_default_separator(key).tr(user_separator, I18n.default_separator)
         end
     end
   end

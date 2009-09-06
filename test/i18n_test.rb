@@ -1,10 +1,6 @@
-$:.unshift "lib"
+# encoding: utf-8
 
-require 'rubygems'
-require 'test/unit'
-require 'mocha'
-require 'i18n'
-require 'active_support'
+require File.expand_path(File.dirname(__FILE__) + '/test_helper')
 
 class I18nTest < Test::Unit::TestCase
   def setup
@@ -23,19 +19,19 @@ class I18nTest < Test::Unit::TestCase
   end
 
   def test_can_set_backend
-    assert_nothing_raised{ I18n.backend = self }
+    assert_nothing_raised { I18n.backend = self }
     assert_equal self, I18n.backend
     I18n.backend = I18n::Backend::Simple.new
   end
 
   def test_uses_en_us_as_default_locale_by_default
-    assert_equal 'en', I18n.default_locale
+    assert_equal :en, I18n.default_locale
   end
 
   def test_can_set_default_locale
-    assert_nothing_raised{ I18n.default_locale = 'de' }
-    assert_equal 'de', I18n.default_locale
-    I18n.default_locale = 'en'
+    assert_nothing_raised { I18n.default_locale = 'de' }
+    assert_equal :de, I18n.default_locale
+    I18n.default_locale = :en
   end
 
   def test_uses_default_locale_as_locale_by_default
@@ -43,14 +39,35 @@ class I18nTest < Test::Unit::TestCase
   end
 
   def test_can_set_locale_to_thread_current
-    assert_nothing_raised{ I18n.locale = 'de' }
-    assert_equal 'de', I18n.locale
-    assert_equal 'de', Thread.current[:locale]
-    I18n.locale = 'en'
+    assert_nothing_raised { I18n.locale = 'de' }
+    assert_equal :de, I18n.locale
+    assert_equal :de, Thread.current[:locale]
+    I18n.locale = :en
+  end
+
+  def test_defaults_to_dot_as_separator
+    assert_equal '.', I18n.default_separator
+  end
+
+  def test_can_set_default_separator
+    assert_nothing_raised { I18n.default_separator = "\001" }
+    I18n.default_separator = '.' # revert it
+  end
+
+  def test_normalize_keys
+    assert_equal [:en, :foo, :bar], I18n.send(:normalize_translation_keys, :en, :bar, :foo)
+    assert_equal [:en, :foo, :bar, :baz, :buz], I18n.send(:normalize_translation_keys, :en, :'baz.buz', :'foo.bar')
+    assert_equal [:en, :foo, :bar, :baz, :buz], I18n.send(:normalize_translation_keys, :en, 'baz.buz', 'foo.bar')
+    assert_equal [:en, :foo, :bar, :baz, :buz], I18n.send(:normalize_translation_keys, :en, %w(baz buz), %w(foo bar))
+    assert_equal [:en, :foo, :bar, :baz, :buz], I18n.send(:normalize_translation_keys, :en, [:baz, :buz], [:foo, :bar])
+  end
+
+  def test_uses_passed_separator_to_normalize_keys
+    assert_equal [:en, :foo, :bar, :baz, :buz], I18n.send(:normalize_translation_keys, :en, :'baz|buz', :'foo|bar', '|')
   end
 
   def test_can_set_exception_handler
-    assert_nothing_raised{ I18n.exception_handler = :custom_exception_handler }
+    assert_nothing_raised { I18n.exception_handler = :custom_exception_handler }
     I18n.exception_handler = :default_exception_handler # revert it
   end
 
@@ -72,7 +89,7 @@ class I18nTest < Test::Unit::TestCase
   end
 
   def test_translate_given_no_locale_uses_i18n_locale
-    I18n.backend.expects(:translate).with 'en', :foo, nil
+    I18n.backend.expects(:translate).with :en, :foo, {}
     I18n.translate :foo
   end
 
@@ -85,7 +102,7 @@ class I18nTest < Test::Unit::TestCase
   end
 
   def test_translate_with_array_as_scope_works
-    assert_equal ".", I18n.t(:separator, :scope => ['currency.format'])
+    assert_equal ".", I18n.t(:separator, :scope => %w(currency format))
   end
 
   def test_translate_with_array_containing_dot_separated_strings_as_scope_works
@@ -122,4 +139,25 @@ class I18nTest < Test::Unit::TestCase
   def test_localize_object_raises_argument_error
     assert_raises(I18n::ArgumentError) { I18n.l Object.new }
   end
+
+  def test_proc_exception_handler
+    I18n.exception_handler = Proc.new { |exception, locale, key, options|
+      "No exception here! [Proc handler]"
+    }
+    assert_equal "No exception here! [Proc handler]", I18n.translate(:test_proc_handler)
+  ensure
+    I18n.exception_handler = :default_exception_handler
+  end
+
+  def test_class_exception_handler
+    I18n.exception_handler = Class.new do
+      def call(exception, locale, key, options)
+        "No exception here! [Class handler]"
+      end
+    end.new
+    assert_equal "No exception here! [Class handler]", I18n.translate(:test_class_handler)
+  ensure
+    I18n.exception_handler = :default_exception_handler
+  end
+
 end

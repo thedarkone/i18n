@@ -1,3 +1,11 @@
+# encoding: utf-8
+
+class KeyError < IndexError
+  def initialize(message = nil)
+    super(message || "key not found")
+  end
+end unless defined?(KeyError)
+
 module I18n
   class ArgumentError < ::ArgumentError; end
 
@@ -13,7 +21,7 @@ module I18n
     attr_reader :locale, :key, :options
     def initialize(locale, key, options)
       @key, @locale, @options = key, locale, options
-      keys = I18n.send(:normalize_translation_keys, locale, key, options && options[:scope])
+      keys = I18n.send(:normalize_translation_keys, locale, key, options[:scope])
       keys << 'no key' if keys.size < 2
       super "translation missing: #{keys.join(', ')}"
     end
@@ -28,10 +36,10 @@ module I18n
   end
 
   class MissingInterpolationArgument < ArgumentError
-    attr_reader :key, :string
-    def initialize(key, string)
-      @key, @string = key, string
-      super "interpolation argument #{key.inspect} missing in #{string.inspect}"
+    attr_reader :values, :string
+    def initialize(values, string)
+      @values, @string = values, string
+      super "missing interpolation argument in #{string.inspect} (#{values.inspect} given)"
     end
   end
 
