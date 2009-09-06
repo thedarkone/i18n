@@ -8,6 +8,11 @@ h2. Fast backend
 
 This fork includes a @Fast@ backend that optimizes for the most common lookups and makes them about 20x (for @t(:'foo.bar.baz')@) or 6x (for @t(:'foo.bar.baz', :a=>'A', :b=>'B')@) times faster than the original @Simple@ backend. The @Fast@ backend is slightly less memory efficient and is slower to @reload!@, but should be a great choice for production environment.
 
+h3. Branches
+
+"2-3-stable":http://github.com/thedarkone/i18n/tree/2-3-stable branch is for the old @I18n@ gem shipped with Rails 2.3
+"master":http://github.com/thedarkone/i18n/tree/master is for the current @I18n@ gem version
+
 h3. Usage
 
 Clone the repo as a plugin into your Rails app.
