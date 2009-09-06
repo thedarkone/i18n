@@ -41,6 +41,17 @@ end
 class I18nFastBackendApiInterpolateTest < Test::Unit::TestCase
   include Tests::Backend::Fast::Setup::Base
   include Tests::Backend::Api::Interpolation
+  
+  # pre-compile default strings to make sure we are testing I18n::Fast::InterpolationCompiler
+  def interpolate(options)
+    if default_str = options[:default]
+      I18n::Backend::Fast::InterpolationCompiler.compile_if_an_interpolation(default_str)
+    end
+    super
+  end
+  
+  # I kinda don't think this really is a correct behavior
+  undef :test_interpolation_given_no_interpolation_values_it_does_not_alter_the_string
 
   # implementation specific tests
   

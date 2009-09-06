@@ -10,7 +10,7 @@ module I18n
         def compile_if_an_interpolation(string)
           if interpolated_str?(string)
             string.instance_eval <<-RUBY_EVAL, __FILE__, __LINE__
-              def i18n_interpolate(values = {})
+              def i18n_interpolate(v = {})
                 "#{compiled_interpolation_body(string)}"
               end
             RUBY_EVAL
@@ -24,7 +24,7 @@ module I18n
         end
 
         protected
-        # tokenize("foo {{bar}} baz \\\\{{buz}}") # => ["foo ", "{{bar}}", " baz ", "\\\\{{buz}}"]
+        # tokenize("foo {{bar}} baz \\{{buz}}") # => ["foo ", "{{bar}}", " baz ", "\\{{buz}}"]
         def tokenize(str)
           str.split(TOKENIZER)
         end
@@ -41,12 +41,32 @@ module I18n
         end
 
         def compile_interpolation_token(key)
-          eskey = escape_key_sym(key)
-          if Base::RESERVED_KEYS.include?(key)
-            "\#{raise(ReservedInterpolationKey.new(#{eskey}, self))}"
-          else
-            "\#{values[#{eskey}] || (values.has_key?(#{eskey}) && values[#{eskey}].to_s) || raise(MissingInterpolationArgument.new(#{eskey}, self))}"
-          end
+          "\#{#{interpolate_or_raise_missing(key)}}"
+        end
+        
+        def interpolate_or_raise_missing(key)
+          escaped_key = escape_key_sym(key)
+          Base::RESERVED_KEYS.include?(key) ? reserved_key(escaped_key) : interpolate_key(escaped_key)
+        end
+        
+        def interpolate_key(key)
+          [direct_key(key), nil_key(key), missing_key(key)].join('||')
+        end
+        
+        def direct_key(key)
+          "((t = v[#{key}]) && t.respond_to?(:call) ? t.call : t)"
+        end
+        
+        def nil_key(key)
+          "(v.has_key?(#{key}) && '')"
+        end
+        
+        def missing_key(key)
+          "raise(MissingInterpolationArgument.new(#{key}, self))"
+        end
+        
+        def reserved_key(key)
+          "raise(ReservedInterpolationKey.new(#{key}, self))"
         end
 
         def escape_plain_str(str)

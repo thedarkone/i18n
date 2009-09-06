@@ -37,7 +37,7 @@ class InterpolationCompilerTest < Test::Unit::TestCase
   end
 
   def test_non_interpolated_strings_or_arrays_dont_get_compiled
-    ['abc', '\\\\{a}}', '{a}}', []].each do |obj|
+    ['abc', '\\{a}}', '{a}}', []].each do |obj|
       InterpolationCompiler.compile_if_an_interpolation(obj)
       assert_equal false, obj.respond_to?(:i18n_interpolate)
     end
@@ -63,10 +63,11 @@ class InterpolationCompilerTest < Test::Unit::TestCase
     assert_handles_key('{{ }}',      :' '     )
     assert_handles_key('{{:}}',      :':'     )
     assert_handles_key("{{:''}}",    :":''"   )
+    assert_handles_key('{{:"}}',     :':"'    )
   end
 
   def test_str_containing_only_escaped_interpolation_is_handled_correctly
-    assert_equal 'abc {{x}}', compile_and_interpolate('abc \\\\{{x}}')
+    assert_equal 'abc {{x}}', compile_and_interpolate('abc \\{{x}}')
   end
 
   def test_handles_weired_strings
@@ -74,8 +75,8 @@ class InterpolationCompilerTest < Test::Unit::TestCase
     assert_equal '"#{abc}"',      compile_and_interpolate('"#{ab{{a}}c}"',    :a    => '' )
     assert_equal 'a}',            compile_and_interpolate('{{{a}}}',          :'{a' => 'a')
     assert_equal '"',             compile_and_interpolate('"{{a}}',           :a    => '' )
-    assert_equal 'a{{a}}',        compile_and_interpolate('{{a}}\\\\{{a}}',   :a    => 'a')
-    assert_equal '\\{{a}}',       compile_and_interpolate('\\\\\\{{a}}')
+    assert_equal 'a{{a}}',        compile_and_interpolate('{{a}}\\{{a}}',     :a    => 'a')
+    assert_equal '\\{{a}}',       compile_and_interpolate('\\\\{{a}}')
     assert_equal '\";eval("a")',  compile_and_interpolate('\";eval("{{a}}")', :a    => 'a')
     assert_equal '\";eval("a")',  compile_and_interpolate('\";eval("a"){{a}}',:a    => '' )
   end
