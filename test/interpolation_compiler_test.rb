@@ -5,15 +5,15 @@ require 'rubygems'
 require 'test/unit'
 require 'i18n'
 
-PluralizationCompiler = I18n::Backend::Fast::PluralizationCompiler
+InterpolationCompiler = I18n::Backend::Fast::InterpolationCompiler
 
-class PluralizationCompilerTest < Test::Unit::TestCase
+class InterpolationCompilerTest < Test::Unit::TestCase
   def compile_and_interpolate(str, values = {})
-    PluralizationCompiler.compile_if_an_interpolation(str).i18n_interpolate(values)
+    InterpolationCompiler.compile_if_an_interpolation(str).i18n_interpolate(values)
   end
 
   def assert_escapes_interpolation_key(expected, malicious_str)
-    assert_equal(expected, PluralizationCompiler.send(:escape_key_sym, malicious_str))
+    assert_equal(expected, InterpolationCompiler.send(:escape_key_sym, malicious_str))
   end
 
   def test_escape_key_properly_escapes
@@ -25,7 +25,7 @@ class PluralizationCompilerTest < Test::Unit::TestCase
   end
 
   def assert_escapes_plain_string(expected, plain_str)
-    assert_equal expected, PluralizationCompiler.send(:escape_plain_str, plain_str)
+    assert_equal expected, InterpolationCompiler.send(:escape_plain_str, plain_str)
   end
 
   def test_escape_plain_string_properly_escapes
@@ -38,7 +38,7 @@ class PluralizationCompilerTest < Test::Unit::TestCase
 
   def test_non_interpolated_strings_or_arrays_dont_get_compiled
     ['abc', '\\\\{a}}', '{a}}', []].each do |obj|
-      PluralizationCompiler.compile_if_an_interpolation(obj)
+      InterpolationCompiler.compile_if_an_interpolation(obj)
       assert_equal false, obj.respond_to?(:i18n_interpolate)
     end
   end

@@ -1,7 +1,7 @@
 module I18n
   module Backend
     class Fast < Base
-      module PluralizationCompiler
+      module InterpolationCompiler
         extend self
         
         TOKENIZER                    = /(\\\{\{[^\}]+\}\}|\{\{[^\}]+\}\})/

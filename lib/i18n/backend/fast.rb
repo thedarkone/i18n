@@ -1,4 +1,4 @@
-require 'i18n/backend/fast/pluralization_compiler'
+require 'i18n/backend/fast/interpolation_compiler'
 
 module I18n
   module Backend
@@ -29,7 +29,7 @@ module I18n
         def flatten_hash(h, nested_stack = [], flattened_h = {})
           h.each_pair do |k, v|
             new_nested_stack = nested_stack + [escape_default_separator(k)]
-            flattened_h[nested_stack_to_flat_key(new_nested_stack)] = PluralizationCompiler.compile_if_an_interpolation(v)
+            flattened_h[nested_stack_to_flat_key(new_nested_stack)] = InterpolationCompiler.compile_if_an_interpolation(v)
             flatten_hash(v, new_nested_stack, flattened_h) if v.kind_of?(Hash)
           end
 
