@@ -1,12 +1,4 @@
 # encoding: utf-8
-$:.unshift "lib"
-
-require 'rubygems'
-require 'test/unit'
-require 'mocha'
-require 'i18n'
-require 'time'
-require 'yaml'
 
 class FastBackendTest < Test::Unit::TestCase
   def setup
