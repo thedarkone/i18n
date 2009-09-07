@@ -24,7 +24,43 @@ For more information and lots of resources see: "http://rails-i18n.org/wiki":htt
 
 h2. Fast backend
 
-This fork includes a @Fast@ backend that optimizes for the most common lookups and makes them about 20x (for @t(:'foo.bar.baz')@) or 6x (for @t(:'foo.bar.baz', :a=>'A', :b=>'B')@) times faster than the original @Simple@ backend. The @Fast@ backend is slightly less memory efficient and is slower to @reload!@, but should be a great choice for production environment.
+This fork includes a @Fast@ backend that optimizes for the most common lookups and makes them faster than the original @Simple@ backend. The @Fast@ backend is slightly less memory efficient and is slower to @reload!@, but should be a great choice for production environment.
+
+Here's the output of the included benchamrk (the source can be found in `benchmark/bench.rb`):
+
+h3. Ruby 1.8.6:
+<pre>
+  $ ruby bench.rb 
+  Rehearsal ----------------------------------------------------------------------------
+  s.t(:'foo.bar.bax.buz')                   12.560000   0.100000  12.660000 ( 14.118697)
+  f.t(:'foo.bar.bax.buz')                    1.210000   0.010000   1.220000 (  1.420918)
+  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  21.270000   0.170000  21.440000 ( 23.812063)
+  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   3.090000   0.020000   3.110000 (  3.474864)
+  ------------------------------------------------------------------ total: 38.430000sec
+
+                                                 user     system      total        real
+  s.t(:'foo.bar.bax.buz')                   12.600000   0.100000  12.700000 ( 14.140978)
+  f.t(:'foo.bar.bax.buz')                    1.210000   0.010000   1.220000 (  1.308616)
+  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  21.270000   0.170000  21.440000 ( 24.077774)
+  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   3.060000   0.020000   3.080000 (  3.429054)
+</pre>
+
+h3. Ruby 1.9.1:
+<pre>
+  $ /usr/local/ruby1.9/bin/ruby bench.rb 
+  Rehearsal ----------------------------------------------------------------------------
+  s.t(:'foo.bar.bax.buz')                    6.800000   0.070000   6.870000 (  7.680139)
+  f.t(:'foo.bar.bax.buz')                    0.520000   0.000000   0.520000 (  0.561464)
+  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  12.890000   0.130000  13.020000 ( 14.533934)
+  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   1.930000   0.020000   1.950000 (  2.132250)
+  ------------------------------------------------------------------ total: 22.360000sec
+
+                                                 user     system      total        real
+  s.t(:'foo.bar.bax.buz')                    6.800000   0.070000   6.870000 (  7.659024)
+  f.t(:'foo.bar.bax.buz')                    0.510000   0.000000   0.510000 (  0.560259)
+  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  12.890000   0.130000  13.020000 ( 14.491398)
+  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   1.940000   0.020000   1.960000 (  2.127320)
+</pre>
 
 h3. Branches
 
