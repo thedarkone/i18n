@@ -29,6 +29,7 @@ This fork includes a @Fast@ backend that optimizes for the most common lookups a
 Here's the output of the included benchamrk (the source can be found in `benchmark/bench.rb`):
 
 h3. Ruby 1.8.6:
+
 <pre><code>
   $ ruby bench.rb 
   Rehearsal ----------------------------------------------------------------------------
@@ -46,6 +47,7 @@ h3. Ruby 1.8.6:
 </code></pre>
 
 h3. Ruby 1.9.1:
+
 <pre><code>
   $ /usr/local/ruby1.9/bin/ruby bench.rb 
   Rehearsal ----------------------------------------------------------------------------
