@@ -1,4 +1,5 @@
-$:.unshift "../lib"
+#!/usr/bin/env ruby -KU
+$:.unshift(File.join(File.dirname(__FILE__), "../lib"))
  
 require 'i18n'
 require 'benchmark'
