@@ -7,8 +7,21 @@
 module I18n
   module Backend
     module LazyReloading
-      def reload!
-        flush_translations if stale?
+      def reload_with_mtime_check!
+        if stale?
+          reload_without_mtime_check!
+          file_mtimes.clear
+        end
+      end
+      
+      def self.included(backend)
+        backend.class_eval do
+          alias_method :reload_without_mtime_check!, :reload!
+          alias_method :reload!, :reload_with_mtime_check!
+
+          alias_method :load_file_without_mtime_tracking, :load_file
+          alias_method :load_file, :load_file_with_mtime_tracking
+        end
       end
       
     protected
@@ -20,19 +33,13 @@ module I18n
       def load_paths
         I18n.load_path.flatten
       end
-
-      def flush_translations
-        @initialized  = false
-        @translations = nil
-        @file_mtimes  = {}
-      end
       
       def file_mtimes
         @file_mtimes ||= {}
       end
       
-      def load_file(filename)
-        super
+      def load_file_with_mtime_tracking(filename)
+        load_file_without_mtime_tracking(filename)
         record_mtime_of(filename)
       end
       
