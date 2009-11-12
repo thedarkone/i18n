@@ -82,9 +82,10 @@ h3. Slower development mode and @LazyReloading@
 
 @Fast@ backend is at least a few times slower to @reload!@ than the @Simple@ backend and since Rails auto-reloads translation files on each request while in development mode using @Fast@ backend in dev mode might slow you down.
 
-@LazyReloading@ extension tries to mitigate the issue by first checking @mtime@s of the translation files before reloading them. It is also helpful even if you are only using @Simple@ backend and have a big application with huge translation files.
+@LazyReloading@ extension tries to mitigate the issue by first checking @mtimes@ of the translation files before reloading them. It is also helpful even if you are running on @Simple@ backend and have a big application with huge translation files.
 
 Using @LazyReloading@:
+
 <pre>
   # in initializer or enviroment.rb
   I18n::Backend::Base.send(:include, I18n::Backend::LazyReloading)
