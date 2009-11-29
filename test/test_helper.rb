@@ -6,12 +6,14 @@ require 'rubygems'
 require 'test/unit'
 require 'mocha'
 require 'i18n'
+require 'i18n/core_ext/object/meta_class'
 require 'time'
 require 'yaml'
 
 require File.dirname(__FILE__) + '/with_options'
 require File.dirname(__FILE__) + '/backend/simple/setup'
 require File.dirname(__FILE__) + '/backend/fast/setup'
+require File.dirname(__FILE__) + '/backend/active_record/setup'
 
 Dir[File.dirname(__FILE__) + '/api/**/*.rb'].each do |filename|
   require filename
@@ -27,7 +29,7 @@ class Test::Unit::TestCase
   def euc_jp(string)
     string.encode!(Encoding::EUC_JP)
   end
-  
+
   def locales_dir
     File.dirname(__FILE__) + '/fixtures/locales'
   end
@@ -62,11 +64,3 @@ class Test::Unit::TestCase
     Time.parse('2008-03-01 18:00 UTC')
   end
 end
-
-class Object
-  def meta_class
-    class << self; self; end
-  end
-end
-
-

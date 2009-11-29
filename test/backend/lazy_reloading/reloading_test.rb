@@ -7,13 +7,13 @@ class I18nBackendLazyReloadingTest < Test::Unit::TestCase
   class LazyBackend < I18n::Backend::Simple
     include I18n::Backend::LazyReloading
   end
-  
+
   include Tests::Backend::Simple::Setup::Base
 
   def new_backend
     LazyBackend.new
   end
-  
+
   def locale_fixture_path(file)
     File.join(locales_dir, file)
   end

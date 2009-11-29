@@ -1,19 +1,21 @@
 # encoding: utf-8
 
-# Authors::   Matt Aimonetti (http://railsontherun.com/),
-#             Sven Fuchs (http://www.artweb-design.de),
+# Authors::   Sven Fuchs (http://www.artweb-design.de),
 #             Joshua Harvey (http://www.workingwithrails.com/person/759-joshua-harvey),
-#             Saimon Moore (http://saimonmoore.net),
 #             Stephan Soller (http://www.arkanis-development.de/),
+#             Saimon Moore (http://saimonmoore.net),
 #             thedarkone (http://github.com/thedarkone)
+#             Matt Aimonetti (http://railsontherun.com/)
 # Copyright:: Copyright (c) 2008 The Ruby i18n Team
 # License::   MIT
-require 'i18n/backend/simple'
-require 'i18n/backend/fast'
 require 'i18n/exceptions'
-require 'i18n/string'
+require 'i18n/core_ext/string/interpolate'
 
 module I18n
+  autoload :Backend, 'i18n/backend'
+  autoload :Helpers, 'i18n/helpers'
+  autoload :Locale,  'i18n/locale'
+
   @@backend = nil
   @@load_path = nil
   @@default_locale = :en
@@ -203,9 +205,10 @@ module I18n
       options = args.last.is_a?(Hash) ? args.pop : {}
       key     = args.shift
       locale  = options.delete(:locale) || I18n.locale
+      raises  = options.delete(:raise)
       backend.translate(locale, key, options)
     rescue I18n::ArgumentError => exception
-      raise exception if options[:raise]
+      raise exception if raises
       handle_exception(exception, locale, key, options)
     end
     alias :t :translate

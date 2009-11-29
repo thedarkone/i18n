@@ -1,13 +1,11 @@
 # encoding: utf-8
 
-require 'i18n/locale/fallbacks'
-
 # I18n locale fallbacks are useful when you want your application to use
 # translations from other locales when translations for the current locale are
 # missing. E.g. you might want to use :en translations when translations in
 # your applications main locale :de are missing.
 #
-# To enable locale fallbacks you can simply include the Fallbacks module to 
+# To enable locale fallbacks you can simply include the Fallbacks module to
 # the Simple backend - or whatever other backend you are using:
 #
 #   I18n::Backend::Simple.send(:include, I18n::Backend::Fallbacks)

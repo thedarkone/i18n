@@ -6,7 +6,7 @@ module I18n
     CONTEXT_SEPARATOR = "\004"
 
     @@plural_keys = { :en => [:one, :other] }
-    
+
     class << self
       # returns an array of plural keys for the given locale so that we can
       # convert from gettext's integer-index based style
@@ -15,8 +15,8 @@ module I18n
         @@plural_keys[locale] || @@plural_keys[:en]
       end
 
-      def extract_scope(msgid, separator = nil)
-        scope = msgid.to_s.split(separator || '|')
+      def extract_scope(msgid, separator)
+        scope = msgid.to_s.split(separator)
         msgid = scope.pop
         [scope, msgid]
       end

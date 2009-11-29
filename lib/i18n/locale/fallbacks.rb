@@ -1,7 +1,5 @@
 # encoding: utf-8
 
-require 'i18n/locale/tag'
-
 # Locale Fallbacks
 #
 # Extends the I18n module to hold a fallbacks instance which is set to an
@@ -42,7 +40,7 @@ require 'i18n/locale/tag'
 #
 #   # people speaking Catalan also speak Spanish as spoken in Spain
 #   fallbacks = I18n.fallbacks
-#   fallbacks.map(:ca => :"es-ES") 
+#   fallbacks.map(:ca => :"es-ES")
 #   fallbacks[:ca] # => [:ca, :"es-ES", :es, :"en-US", :en]
 #
 #   # people speaking Arabian as spoken in Palestine also speak Hebrew as spoken in Israel

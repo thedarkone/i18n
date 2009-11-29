@@ -5,9 +5,9 @@ require 'rubygems'
 require 'test/unit'
 require 'i18n'
 
-InterpolationCompiler = I18n::Backend::Fast::InterpolationCompiler
-
 class InterpolationCompilerTest < Test::Unit::TestCase
+  InterpolationCompiler = I18n::Backend::Fast::InterpolationCompiler
+
   def compile_and_interpolate(str, values = {})
     InterpolationCompiler.compile_if_an_interpolation(str).i18n_interpolate(values)
   end
@@ -80,5 +80,4 @@ class InterpolationCompilerTest < Test::Unit::TestCase
     assert_equal '\";eval("a")',  compile_and_interpolate('\";eval("{{a}}")', :a    => 'a')
     assert_equal '\";eval("a")',  compile_and_interpolate('\";eval("a"){{a}}',:a    => '' )
   end
-
 end

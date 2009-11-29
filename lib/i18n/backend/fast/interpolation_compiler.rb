@@ -1,9 +1,11 @@
+# encoding: utf-8
+
 module I18n
   module Backend
-    class Fast < Base
+    class Fast
       module InterpolationCompiler
         extend self
-        
+
         TOKENIZER                    = /(\\\{\{[^\}]+\}\}|\{\{[^\}]+\}\})/
         INTERPOLATION_SYNTAX_PATTERN = /(\\)?(\{\{([^\}]+)\}\})/
 
@@ -43,28 +45,28 @@ module I18n
         def compile_interpolation_token(key)
           "\#{#{interpolate_or_raise_missing(key)}}"
         end
-        
+
         def interpolate_or_raise_missing(key)
           escaped_key = escape_key_sym(key)
           Base::RESERVED_KEYS.include?(key) ? reserved_key(escaped_key) : interpolate_key(escaped_key)
         end
-        
+
         def interpolate_key(key)
           [direct_key(key), nil_key(key), missing_key(key)].join('||')
         end
-        
+
         def direct_key(key)
           "((t = v[#{key}]) && t.respond_to?(:call) ? t.call : t)"
         end
-        
+
         def nil_key(key)
           "(v.has_key?(#{key}) && '')"
         end
-        
+
         def missing_key(key)
           "raise(MissingInterpolationArgument.new(#{key}, self))"
         end
-        
+
         def reserved_key(key)
           "raise(ReservedInterpolationKey.new(#{key}, self))"
         end
@@ -77,7 +79,6 @@ module I18n
           # rely on Ruby to do all the hard work :)
           key.to_sym.inspect
         end
-
       end
     end
   end

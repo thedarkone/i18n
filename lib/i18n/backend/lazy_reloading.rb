@@ -13,7 +13,7 @@ module I18n
           file_mtimes.clear
         end
       end
-      
+
       def self.included(backend)
         backend.class_eval do
           alias_method :reload_without_mtime_check!, :reload!
@@ -23,26 +23,26 @@ module I18n
           alias_method :load_file, :load_file_with_mtime_tracking
         end
       end
-      
+
     protected
       def init_translations
         load_translations(*load_paths)
         @initialized = true
       end
-      
+
       def load_paths
         I18n.load_path.flatten
       end
-      
+
       def file_mtimes
         @file_mtimes ||= {}
       end
-      
+
       def load_file_with_mtime_tracking(filename)
         load_file_without_mtime_tracking(filename)
         record_mtime_of(filename)
       end
-      
+
       def record_mtime_of(filename)
         file_mtimes[filename] = File.mtime(filename)
       end

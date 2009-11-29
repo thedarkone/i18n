@@ -6,9 +6,10 @@ module Tests
       module Setup
         module Base
           include Tests::Backend::Simple::Setup::Base
-          
-          def new_backend
-            I18n::Backend::Fast.new
+
+          def setup
+            I18n.backend = I18n::Backend::Fast.new
+            super
           end
         end
 
