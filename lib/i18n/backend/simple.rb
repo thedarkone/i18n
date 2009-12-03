@@ -99,7 +99,7 @@ module I18n
         def decide_on_localization_format(locale, object, format)
           type = object.respond_to?(:sec) ? 'time' : 'date'
           # TODO raise exception unless format found?
-          lookup(locale, :"#{type}.formats.#{format}") || format.to_s.dup
+          (lookup(locale, :"#{type}.formats.#{format}") || format.to_s).dup
         end
 
         # Looks up a translation from the translations hash. Returns nil if
