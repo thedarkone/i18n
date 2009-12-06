@@ -7,10 +7,11 @@ require 'i18n/backend/active_record/translation'
 #  as the following example shows:
 #
 #     I18n.backend = I18n::Backend::Chain.new(I18n::Backend::ActiveRecord.new, I18.backend, I18n::Backend::ActiveRecordMissing.new)
-#  
+#
 module I18n
   module Backend
     class ActiveRecord
+      autoload :Missing,     'i18n/backend/active_record/missing'
       autoload :StoreProcs,  'i18n/backend/active_record/store_procs'
       autoload :Translation, 'i18n/backend/active_record/translation'
 
@@ -19,9 +20,9 @@ module I18n
       def reload!
       end
 
-      def store_translations(locale, data)
-        separator = I18n.default_separator # TODO allow to pass as an option?
-        wind_keys(data).each do |key, v|
+      def store_translations(locale, data, options = {})
+        separator = options[:separator] || I18n.default_separator
+        wind_keys(data, separator).each do |key, v|
           Translation.locale(locale).lookup(expand_keys(key, separator), separator).delete_all
           Translation.create(:locale => locale.to_s, :key => key, :value => v)
         end
@@ -54,7 +55,7 @@ module I18n
               hash[r.key.slice(chop_range)] = r.value
               hash
             end
-            deep_symbolize_keys(unwind_keys(result))
+            deep_symbolize_keys(unwind_keys(result, separator))
           end
         end
 

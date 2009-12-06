@@ -57,12 +57,12 @@ module I18n
 
         named_scope :lookup, lambda { |keys, *separator|
           keys = Array(keys).map! { |key| key.to_s }
-          separator ||= I18n.default_separator
+          separator = separator.first || I18n.default_separator
           { :conditions => ["`key` IN (?) OR `key` LIKE '#{keys.last}#{separator}%'", keys] }
         }
 
         def self.available_locales
-          Translation.find(:all, :select => 'DISTINCT locale').map { |t| t.locale }
+          Translation.find(:all, :select => 'DISTINCT locale').map { |t| t.locale.to_sym }
         end
         
         def interpolates?(key)

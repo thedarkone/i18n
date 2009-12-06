@@ -27,8 +27,8 @@ module I18n
         backends.each { |backend| backend.reload! }
       end
 
-      def store_translations(locale, data)
-        backends.first.store_translations(locale, data)
+      def store_translations(locale, data, options = {})
+        backends.first.store_translations(locale, data, options = {})
       end
 
       def available_locales
@@ -62,7 +62,7 @@ module I18n
             result = backend.localize(locale, object, format, options) and return result
           rescue MissingTranslationData
           end
-        end or nil
+        end and nil
       end
 
       protected
