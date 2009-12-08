@@ -200,14 +200,15 @@ module I18n
     # from the argument values passed to #translate. Therefor your lambdas should
     # always return the same translations/values per unique combination of argument
     # values.
-    def translate(*args)
-      options = args.last.is_a?(Hash) ? args.pop : {}
-      key     = args.shift
-      locale  = options.key?(:locale) ? options.delete(:locale) : I18n.locale
-      raises  = options.delete(:raise)
-      backend.translate(locale, key, options)
+    def translate(key, options = nil)
+      if options || (key.kind_of?(Hash) && options = key)
+        backend.translate(locale = options.key?(:locale) ? options.delete(:locale) : I18n.locale, key, options)
+      else
+        backend.translate(locale = I18n.locale, key)
+      end
     rescue I18n::ArgumentError => exception
-      raise exception if raises
+      options = options || {}
+      raise exception if options[:raise]
       handle_exception(exception, locale, key, options)
     end
     alias :t :translate
