@@ -1,13 +1,20 @@
+require 'rake/testtask'
+
 task :default => [:test]
 
-task :test do
-  ruby "test/all.rb"
+Rake::TestTask.new(:test) do |t|
+  t.pattern = "#{File.dirname(__FILE__)}/test/all.rb"
+  t.verbose = true
 end
+Rake::Task['test'].comment = "Run all i18n tests"
+
+require File.expand_path("lib/i18n/version", File.dirname(__FILE__))
 
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |s|
     s.name = "i18n"
+    s.version = I18n::VERSION
     s.rubyforge_project = "i18n"
     s.summary = "New wave Internationalization support for Ruby"
     s.email = "rails-i18n@googlegroups.com"

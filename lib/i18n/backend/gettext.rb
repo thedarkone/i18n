@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 require 'i18n/gettext'
-require File.expand_path(File.dirname(__FILE__) + '/../../../vendor/po_parser.rb')
+require 'i18n/gettext/po_parser'
 
 # Experimental support for using Gettext po files to store translations.
 #
@@ -41,7 +41,7 @@ module I18n
 
         def normalize(locale, data)
           data.inject({}) do |result, (key, value)|
-            unless key.blank?
+            unless key.nil? || key.empty?
               key, value = normalize_pluralization(locale, key, value) if key.index("\000")
 
               parts = key.split('|').reverse

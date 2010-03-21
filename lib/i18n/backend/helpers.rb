@@ -1,6 +1,8 @@
 module I18n
   module Backend
     module Helpers
+      SEPARATOR_ESCAPE_CHAR = "\001"
+
       # Return a new hash with all keys and nested keys converted to symbols.
       def deep_symbolize_keys(hash)
         hash.inject({}) { |result, (key, value)|
@@ -13,17 +15,30 @@ module I18n
       # Flatten keys for nested Hashes by chaining up keys using the separator
       #   >> { "a" => { "b" => { "c" => "d", "e" => "f" }, "g" => "h" }, "i" => "j"}.wind
       #   => { "a.b.c" => "d", "a.b.e" => "f", "a.g" => "h", "i" => "j" }
-      def wind_keys(hash, separator = ".", prev_key = nil, result = {})
-        hash.inject(result) do |result, pair|
-          key, value = *pair
-          curr_key = [prev_key, key].compact.join(separator)
+      def wind_keys(hash, separator = nil, subtree = false, prev_key = nil, result = {}, orig_hash=hash)
+        separator ||= I18n.default_separator
+
+        hash.each_pair do |key, value|
+          key = escape_default_separator(key, separator)
+          curr_key = [prev_key, key].compact.join(separator).to_sym
+
           if value.is_a?(Hash)
-            wind_keys(value, separator, curr_key, result)
+            result[curr_key] = value if subtree
+            wind_keys(value, separator, subtree, curr_key, result, orig_hash)
           else
-            result[curr_key] = value
+            result[unescape_default_separator(curr_key)] = value
           end
-          result
         end
+
+        result
+      end
+
+      def escape_default_separator(key, separator=nil)
+        key.to_s.tr(separator || I18n.default_separator, SEPARATOR_ESCAPE_CHAR)
+      end
+      
+      def unescape_default_separator(key, separator=nil)
+        key.to_s.tr(SEPARATOR_ESCAPE_CHAR, separator || I18n.default_separator).to_sym
       end
 
       # Expand keys chained by the the given separator through nested Hashes
@@ -32,7 +47,7 @@ module I18n
       def unwind_keys(hash, separator = ".")
         result = {}
         hash.each do |key, value|
-          keys = key.split(separator)
+          keys = key.to_s.split(separator)
           curr = result
           curr = curr[keys.shift] ||= {} while keys.size > 1
           curr[keys.shift] = value

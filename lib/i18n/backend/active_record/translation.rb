@@ -10,7 +10,8 @@ module I18n
     #   create_table :translations do |t|
     #     t.string :locale
     #     t.string :key
-    #     t.string :value
+    #     t.text   :value
+    #     t.text   :interpolations
     #     t.boolean :is_proc, :default => false
     #   end
     #
@@ -56,9 +57,11 @@ module I18n
         }
 
         named_scope :lookup, lambda { |keys, *separator|
-          keys = Array(keys).map! { |key| key.to_s }
-          separator = separator.first || I18n.default_separator
-          { :conditions => ["`key` IN (?) OR `key` LIKE '#{keys.last}#{separator}%'", keys] }
+          column_name = connection.quote_column_name('key')
+          keys        = Array(keys).map! { |key| key.to_s }
+          separator   = separator.first || I18n.default_separator
+          namespace   = "#{keys.last}#{separator}%"
+          { :conditions => ["#{column_name} IN (?) OR #{column_name} LIKE ?", keys, namespace] }
         }
 
         def self.available_locales
@@ -71,9 +74,10 @@ module I18n
 
         def value
           if is_proc
-            Kernel.eval read_attribute(:value)
+            Kernel.eval(read_attribute(:value))
           else
-            read_attribute(:value)
+            value = read_attribute(:value)
+            value == 'f' ? false : value
           end
         end
       end

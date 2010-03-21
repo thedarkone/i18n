@@ -13,7 +13,6 @@ module I18n
           file_mtimes.clear
         end
       end
-
       def self.included(backend)
         backend.class_eval do
           alias_method :reload_without_mtime_check!, :reload!

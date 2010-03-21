@@ -26,7 +26,6 @@ Alternative backends:
 
 * Chain
 * ActiveRecord (optionally: ActiveRecordMissing)
-* Fast
 
 For more information and lots of resources see: "http://rails-i18n.org/wiki":http://rails-i18n.org/wiki
 
@@ -52,92 +51,28 @@ The new i18n gem can be loaded from vendor/plugins like this:
 
 Then you can `reload_i18n!` inside an i18n initializer. 
 
-h2. Fast backend
+h2. Tests
 
-This fork includes a @Fast@ backend that optimizes for the most common lookups and makes them faster than the original @Simple@ backend. The @Fast@ backend is slightly less memory efficient and is slower to @reload!@, but should be a great choice for production environment.
+You can run tests both with 
 
-Here's the output of the included benchamrk (the source can be found in `benchmark/bench.rb`):
+* `rake test` or just `rake`
+* run any test file directly, e.g. `ruby test/api/simple_test.rb`
+* run all tests with `ruby test/all.rb`
 
-h3. Ruby 1.8.6:
+The structure of the test suite is a bit unusual as it uses modules to reuse
+particular tests in different test cases.
 
-<pre><code>
-  $ ruby bench.rb 
-  Rehearsal ----------------------------------------------------------------------------
-  s.t(:'foo.bar.bax.buz')                   12.560000   0.100000  12.660000 ( 14.118697)
-  f.t(:'foo.bar.bax.buz')                    1.210000   0.010000   1.220000 (  1.420918)
-  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  21.270000   0.170000  21.440000 ( 23.812063)
-  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   3.090000   0.020000   3.110000 (  3.474864)
-  ------------------------------------------------------------------ total: 38.430000sec
+The reason for this is that we need to enforce the I18n API across various 
+combinations of extensions. E.g. the Simple backend alone needs to support
+the same API as any combination of feature and/or optimization modules included
+to the Simple backend. We test this by reusing the same API defition (implemented
+as test methods) in test cases with different setups.
 
-                                                 user     system      total        real
-  s.t(:'foo.bar.bax.buz')                   12.600000   0.100000  12.700000 ( 14.140978)
-  f.t(:'foo.bar.bax.buz')                    1.210000   0.010000   1.220000 (  1.308616)
-  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  21.270000   0.170000  21.440000 ( 24.077774)
-  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   3.060000   0.020000   3.080000 (  3.429054)
-</code></pre>
+You can find the test cases that enforce the API in test/api. And you can find
+the API definition test methods in test/api/tests.
 
-h3. Ruby 1.9.1:
-
-<pre><code>
-  $ /usr/local/ruby1.9/bin/ruby bench.rb 
-  Rehearsal ----------------------------------------------------------------------------
-  s.t(:'foo.bar.bax.buz')                    6.800000   0.070000   6.870000 (  7.680139)
-  f.t(:'foo.bar.bax.buz')                    0.520000   0.000000   0.520000 (  0.561464)
-  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  12.890000   0.130000  13.020000 ( 14.533934)
-  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   1.930000   0.020000   1.950000 (  2.132250)
-  ------------------------------------------------------------------ total: 22.360000sec
-
-                                                 user     system      total        real
-  s.t(:'foo.bar.bax.buz')                    6.800000   0.070000   6.870000 (  7.659024)
-  f.t(:'foo.bar.bax.buz')                    0.510000   0.000000   0.510000 (  0.560259)
-  s.t(:'foo.bar.tr', :a => 'A', :b => 'B')  12.890000   0.130000  13.020000 ( 14.491398)
-  f.t(:'foo.bar.tr', :a => 'A', :b => 'B')   1.940000   0.020000   1.960000 (  2.127320)
-</code></pre>
-
-h3. Branches
-
-"2-3-stable":http://github.com/thedarkone/i18n/tree/2-3-stable branch is for the old @I18n@ gem shipped with Rails 2.3
-"master":http://github.com/thedarkone/i18n/tree/master is for the current @I18n@ gem version
-
-h3. Usage
-
-Clone the repo as a plugin into your Rails app.
-
-<pre>
-  # in initializer or enviroment.rb
-  I18n.backend = I18n::Backend::Fast.new
-</pre>
-
-h3. Slower development mode and @LazyReloading@
-
-@Fast@ backend is at least a few times slower to @reload!@ than the @Simple@ backend and since Rails auto-reloads translation files on each request while in development mode using @Fast@ backend in dev mode might slow you down.
-
-@LazyReloading@ extension tries to mitigate the issue by first checking @mtimes@ of the translation files before reloading them. It is also helpful even if you are running on @Simple@ backend and have a big application with huge translation files.
-
-Using @LazyReloading@:
-
-<pre>
-  # in initializer or enviroment.rb
-  I18n::Backend::Base.send(:include, I18n::Backend::LazyReloading)
-</pre>
-
-h3. Installation on Rails < 2.3.5 (deprecated)
-
-Up to version 2.3.4 Rails will not accept i18n gems > 0.1.3. There is an unpacked 
-gem inside of active_support/lib/vendor which gets loaded unless gem 'i18n', '~> 0.1.3'. 
-This requirement is relaxed in "6da03653":http://github.com/rails/rails/commit/6da03653
-
-The new i18n gem can be loaded from vendor/plugins like this:
-
-  def reload_i18n!
-    raise "Move to i18n version 0.2.0 or greater" if Rails.version > "2.3.4"
-  
-    $:.grep(/i18n/).each { |path| $:.delete(path) }
-    I18n::Backend.send :remove_const, "Simple"
-    $: << Rails.root.join('vendor', 'plugins', 'i18n', 'lib').to_s
-  end
-
-Then you can `reload_i18n!` inside an i18n initializer. 
+All other test cases (e.g. as defined in test/backend, test/core\_ext) etc. 
+follow the usual test setup and should be easy to grok.
 
 h2. Authors
 
@@ -146,7 +81,7 @@ h2. Authors
 * "Stephan Soller":http://www.arkanis-development.de
 * "Saimon Moore":http://saimonmoore.net
 * "Matt Aimonetti":http://railsontherun.com
-* "thedarkone":http://github.com/thedarkone (@Fast@ backend)
+* "thedarkone":http://github.com/thedarkone
 
 h2. Contributors
 
@@ -164,8 +99,7 @@ h2. Contributors
 * Michael Lang
 * Theo Cushion
 * Yaroslav Markin
-* thedarkone
 
 h2. License
 
-MIT License. See the included MIT-LICENCE file.
+MIT License. See the included MIT-LICENSE file.

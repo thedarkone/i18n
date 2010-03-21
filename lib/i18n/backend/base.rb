@@ -1,13 +1,14 @@
 # encoding: utf-8
 
 require 'yaml'
+require 'i18n/core_ext/hash/except'
 
 module I18n
   module Backend
     module Base
       include I18n::Backend::Helpers
 
-      RESERVED_KEYS = [:scope, :default, :separator]
+      RESERVED_KEYS = [:scope, :default, :separator, :resolve]
       INTERPOLATION_SYNTAX_PATTERN = /(\\)?\{\{([^\}]+)\}\}/
 
       # Accepts a list of paths to translation files. Loads translations from
@@ -22,22 +23,28 @@ module I18n
       # translations will be overwritten by new ones only at the deepest
       # level of the hash.
       def store_translations(locale, data, options = {})
-        merge_translations(locale, data)
+        merge_translations(locale, data, options)
       end
 
       def translate(locale, key, options = {})
-        raise InvalidLocale.new(locale) if locale.nil?
+        raise InvalidLocale.new(locale) unless locale
         return key.map { |k| translate(locale, k, options) } if key.is_a?(Array)
 
-        count, scope, default, separator = options.values_at(:count, *RESERVED_KEYS)
-        values = options.reject { |name, value| RESERVED_KEYS.include?(name) }
+        if options.empty?
+          entry = resolve(locale, key, lookup(locale, key), options)
+          raise(I18n::MissingTranslationData.new(locale, key, options)) if entry.nil?
+        else
+          count, scope, default = options.values_at(:count, :scope, :default)
+          values = options.reject { |name, value| RESERVED_KEYS.include?(name) }
 
-        entry = lookup(locale, key, scope, separator)
-        entry = entry.nil? ? default(locale, key, default, options) : resolve(locale, key, entry, options)
+          entry = lookup(locale, key, scope, options)
+          entry = entry.nil? && default ? default(locale, key, default, options) : resolve(locale, key, entry, options)
+          raise(I18n::MissingTranslationData.new(locale, key, options)) if entry.nil?
 
-        raise(I18n::MissingTranslationData.new(locale, key, options)) if entry.nil?
-        entry = pluralize(locale, entry, count)
-        entry = interpolate(locale, entry, values)
+          entry = pluralize(locale, entry, count)    if count
+          entry = interpolate(locale, entry, values) if values
+        end
+
         entry
       end
 
@@ -50,11 +57,10 @@ module I18n
         if Symbol === format
           key = format
           type = object.respond_to?(:sec) ? 'time' : 'date'
-          format = lookup(locale, :"#{type}.formats.#{key}")
-          raise(MissingTranslationData.new(locale, key, options)) if format.nil?
+          format = I18n.t(:"#{type}.formats.#{key}", :locale => locale, :raise => true)
         end
 
-        format = resolve(locale, object, format, options)
+        # format = resolve(locale, object, format, options)
         format = format.to_s.gsub(/%[aAbBp]/) do |match|
           case match
           when '%a' then I18n.t(:"date.abbr_day_names",                  :locale => locale, :format => format)[object.wday]
@@ -102,17 +108,16 @@ module I18n
         # nested translations hash. Splits keys or scopes containing dots
         # into multiple keys, i.e. <tt>currency.format</tt> is regarded the same as
         # <tt>%w(currency format)</tt>.
-        def lookup(locale, key, scope = [], separator = nil)
+        def lookup(locale, key, scope = [], options = {})
           return unless key
           init_translations unless initialized?
-          keys = I18n.send(:normalize_translation_keys, locale, key, scope, separator)
+          keys = I18n.normalize_keys(locale, key, scope, options[:separator])
           keys.inject(translations) do |result, key|
             key = key.to_sym
-            if result.respond_to?(:has_key?) and result.has_key?(key)
-              result[key]
-            else
-              return nil
-            end
+            return nil unless result.is_a?(Hash) && result.has_key?(key)
+            result = result[key]
+            result = resolve(locale, key, result, options) if result.is_a?(Symbol)
+            result
           end
         end
 
@@ -124,8 +129,8 @@ module I18n
           options = options.dup.reject { |key, value| key == :default }
           case subject
           when Array
-            subject.each do |subject|
-              result = resolve(locale, object, subject, options) and return result
+            subject.each do |item|
+              result = resolve(locale, object, item, options) and return result
             end and nil
           else
             resolve(locale, object, subject, options)
@@ -137,6 +142,7 @@ module I18n
         # given options. If it is a Proc then it will be evaluated. All other
         # subjects will be returned directly.
         def resolve(locale, object, subject, options = nil)
+          return subject if options[:resolve] == false
           case subject
           when Symbol
             I18n.translate(subject, (options || {}).merge(:locale => locale, :raise => true))
@@ -171,23 +177,42 @@ module I18n
         # the <tt>{{...}}</tt> key in a string (once for the string and once for the
         # interpolation).
         def interpolate(locale, string, values = {})
-          return string unless string.is_a?(String) && !values.empty?
+          return string unless string.is_a?(::String) && !values.empty?
 
-          s = string.gsub(INTERPOLATION_SYNTAX_PATTERN) do
-            escaped, key = $1, $2.to_sym
-            if escaped
-              "{{#{key}}}"
-            elsif RESERVED_KEYS.include?(key)
-              raise ReservedInterpolationKey.new(key, string)
-            else
-              "%{#{key}}"
+          preserve_encoding(string) do
+            s = string.gsub(INTERPOLATION_SYNTAX_PATTERN) do
+              escaped, key = $1, $2.to_sym
+              if escaped
+                "{{#{key}}}"
+              elsif RESERVED_KEYS.include?(key)
+                raise ReservedInterpolationKey.new(key, string)
+              else
+                "%{#{key}}"
+              end
             end
+
+            values.each do |key, value|
+              value = value.call(values) if interpolate_lambda?(value, s, key)
+              value = value.to_s unless value.is_a?(::String)
+              values[key] = value
+            end
+
+            s % values
           end
-          values.each { |key, value| values[key] = value.call(values) if interpolate_lambda?(value, s, key) }
-          s % values
 
         rescue KeyError => e
           raise MissingInterpolationArgument.new(values, string)
+        end
+
+        def preserve_encoding(string)
+          if string.respond_to?(:encoding)
+            encoding = string.encoding
+            result = yield
+            result.force_encoding(encoding) if result.respond_to?(:force_encoding)
+            result
+          else
+            yield
+          end
         end
 
         # returns true when the given value responds to :call and the key is
@@ -203,7 +228,7 @@ module I18n
         def load_file(filename)
           type = File.extname(filename).tr('.', '').downcase
           raise UnknownFileType.new(type, filename) unless respond_to?(:"load_#{type}")
-          data = send :"load_#{type}", filename # TODO raise a meaningful exception if this does not yield a Hash
+          data = send(:"load_#{type}", filename) # TODO raise a meaningful exception if this does not yield a Hash
           data.each { |locale, d| merge_translations(locale, d) }
         end
 
@@ -221,13 +246,19 @@ module I18n
 
         # Deep merges the given translations hash with the existing translations
         # for the given locale
-        def merge_translations(locale, data)
+        def merge_translations(locale, data, options = {})
           locale = locale.to_sym
           translations[locale] ||= {}
+          separator = options[:separator] || I18n.default_separator
+          data = unwind_keys(data, separator)
           data = deep_symbolize_keys(data)
 
           # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
-          merger = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+          merger = proc do |key, v1, v2|
+            # TODO should probably be:
+            # raise TypeError.new("can't merge #{v1.inspect} and #{v2.inspect}") unless Hash === v1 && Hash === v2
+            Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : (v2 || v1)
+          end
           translations[locale].merge!(data, &merger)
         end
     end

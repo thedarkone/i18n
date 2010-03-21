@@ -55,6 +55,7 @@ module I18n
         def fetch(*args, &block)
           result = I18n.cache_store.fetch(cache_key(*args), &block)
           raise result if result.is_a?(Exception)
+          result = result.dup if result.frozen? rescue result
           result
         rescue MissingTranslationData => exception
           I18n.cache_store.write(cache_key(*args), exception)
@@ -62,8 +63,12 @@ module I18n
         end
 
         def cache_key(*args)
-          # this assumes that only simple, native Ruby values are passed to I18n.translate
-          keys = ['i18n', I18n.cache_namespace, args.hash]
+          # This assumes that only simple, native Ruby values are passed to I18n.translate.
+          # Also, in Ruby < 1.8.7 {}.hash != {}.hash
+          # (see http://paulbarry.com/articles/2009/09/14/why-rails-3-will-require-ruby-1-8-7)
+          # If args.inspect does not work for you for some reason, patches are very welcome :)
+          hash = RUBY_VERSION >= "1.8.7" ? args.hash : args.inspect
+          keys = ['i18n', I18n.cache_namespace, hash]
           keys.compact.join('-')
         end
     end
