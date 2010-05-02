@@ -13,94 +13,11 @@ require 'i18n/core_ext/string/interpolate'
 
 module I18n
   autoload :Backend, 'i18n/backend'
-  autoload :Helpers, 'i18n/helpers'
+  autoload :Config,  'i18n/config'
+  autoload :Gettext, 'i18n/gettext'
   autoload :Locale,  'i18n/locale'
 
-  class Config
-    # The only configuration value that is not global and scoped to thread is :locale.
-    # It defaults to the default_locale.
-    def locale
-      @locale ||= default_locale
-    end
-
-    # Sets the current locale pseudo-globally, i.e. in the Thread.current hash.
-    def locale=(locale)
-      @locale = locale.to_sym rescue nil
-    end
-
-    # Returns the current backend. Defaults to +Backend::Simple+.
-    def backend
-      @@backend ||= Backend::Simple.new
-    end
-
-    # Sets the current backend. Used to set a custom backend.
-    def backend=(backend)
-      @@backend = backend
-    end
-
-    # Returns the current default locale. Defaults to :'en'
-    def default_locale
-      @@default_locale ||= :en
-    end
-
-    # Sets the current default locale. Used to set a custom default locale.
-    def default_locale=(locale)
-      @@default_locale = locale.to_sym rescue nil
-    end
-
-    # Returns an array of locales for which translations are available.
-    # Unless you explicitely set the these through I18n.available_locales=
-    # the call will be delegated to the backend and memoized on the I18n module.
-    def available_locales
-      @@available_locales ||= backend.available_locales
-    end
-
-    # Sets the available locales.
-    def available_locales=(locales)
-      @@available_locales = locales
-    end
-
-    # Returns the current default scope separator. Defaults to '.'
-    def default_separator
-      @@default_separator ||= '.'
-    end
-
-    # Sets the current default scope separator.
-    def default_separator=(separator)
-      @@default_separator = separator
-    end
-
-    # Return the current exception handler. Defaults to :default_exception_handler.
-    def exception_handler
-      @@exception_handler ||= :default_exception_handler
-    end
-
-    # Sets the exception handler.
-    def exception_handler=(exception_handler)
-      @@exception_handler = exception_handler
-    end
-
-    # Allow clients to register paths providing translation data sources. The
-    # backend defines acceptable sources.
-    #
-    # E.g. the provided SimpleBackend accepts a list of paths to translation
-    # files which are either named *.rb and contain plain Ruby Hashes or are
-    # named *.yml and contain YAML data. So for the SimpleBackend clients may
-    # register translation files like this:
-    #   I18n.load_path << 'path/to/locale/en.yml'
-    def load_path
-      @@load_path ||= []
-    end
-
-    # Sets the load path instance. Custom implementations are expected to
-    # behave like a Ruby Array.
-    def load_path=(load_path)
-      @@load_path = load_path
-    end
-  end
-
   class << self
-
     # Gets I18n configuration object.
     def config
       Thread.current[:i18n_config] ||= I18n::Config.new
@@ -164,7 +81,7 @@ module I18n
     # values passed to #translate as part of the options hash, with the keys matching
     # the interpolation variable names.
     #
-    # <em>E.g.</em>, with a translation <tt>:foo => "foo {{bar}}"</tt> the option
+    # <em>E.g.</em>, with a translation <tt>:foo => "foo %{bar}"</tt> the option
     # value for the key +bar+ will be interpolated into the translation:
     #   I18n.t :foo, :bar => 'baz' # => 'foo baz'
     #
@@ -185,7 +102,7 @@ module I18n
     #
     # The <tt>:count</tt> option can be used both for pluralization and interpolation.
     # <em>E.g.</em>, with the translation
-    # <tt>:foo => ['{{count}} foo', '{{count}} foos']</tt>, count will
+    # <tt>:foo => ['%{count} foo', '%{count} foos']</tt>, count will
     # be interpolated to the pluralized translation:
     #   I18n.t :foo, :count => 1 # => '1 foo'
     #
@@ -219,7 +136,7 @@ module I18n
     # called and passed the key and options.
     #
     # E.g. assuming the key <tt>:salutation</tt> resolves to:
-    #   lambda { |key, options| options[:gender] == 'm' ? "Mr. {{options[:name]}}" : "Mrs. {{options[:name]}}" }
+    #   lambda { |key, options| options[:gender] == 'm' ? "Mr. %{options[:name]}" : "Mrs. %{options[:name]}" }
     #
     # Then <tt>I18n.t(:salutation, :gender => 'w', :name => 'Smith') will result in "Mrs. Smith".
     #
@@ -245,6 +162,69 @@ module I18n
     end
     alias :t! :translate!
 
+    # Transliterates UTF-8 characters to ASCII. By default this method will
+    # transliterate only Latin strings to an ASCII approximation:
+    #
+    #    I18N.transliterate("Ærøskøbing")
+    #    # => "AEroskobing"
+    #
+    #    I18N.transliterate("日本語")
+    #    # => "???"
+    #
+    # It's also possible to add support for per-locale transliterations. I18N
+    # expects transliteration rules to be stored at
+    # <tt>i18n.transliterate.rule</tt>.
+    #
+    # Transliteration rules can either be a Hash or a Proc. Procs must accept a
+    # single string argument. Hash rules inherit the default transliteration
+    # rules, while Procs do not.
+    #
+    # *Examples*
+    #
+    # Setting a Hash in <locale>.yml:
+    #
+    #    i18n:
+    #      transliterate:
+    #        rule:
+    #          ü: "ue"
+    #          ö: "oe"
+    #
+    # Setting a Hash using Ruby:
+    #
+    #     store_translations(:de, :i18n => {
+    #       :transliterate => {
+    #         :rule => {
+    #           "ü" => "ue",
+    #           "ö" => "oe"
+    #         }
+    #       }
+    #     )
+    #
+    # Setting a Proc:
+    #
+    #     translit = lambda {|string| MyTransliterator.transliterate(string) }
+    #     store_translations(:xx, :i18n => {:transliterate => {:rule => translit})
+    #
+    # Transliterating strings:
+    #
+    #     I18N.locale = :en
+    #     I18N.transliterate("Jürgen") # => "Jurgen"
+    #     I18N.locale = :de
+    #     I18N.transliterate("Jürgen") # => "Juergen"
+    #     I18N.transliterate("Jürgen", :locale => :en) # => "Jurgen"
+    #     I18N.transliterate("Jürgen", :locale => :de) # => "Juergen"
+    def transliterate(*args)
+      options      = args.pop if args.last.is_a?(Hash)
+      key          = args.shift
+      locale       = options && options.delete(:locale) || config.locale
+      raises       = options && options.delete(:raise)
+      replacement  = options && options.delete(:replacement)
+      config.backend.transliterate(locale, key, replacement)
+    rescue I18n::ArgumentError => exception
+      raise exception if raises
+      handle_exception(exception, locale, key, options)
+    end
+
     # Localizes certain objects, such as dates and numbers to local formatting.
     def localize(object, options = {})
       locale = options.delete(:locale) || config.locale
@@ -257,10 +237,13 @@ module I18n
     # Splits keys that contain dots into multiple keys. Makes sure all
     # keys are Symbols.
     def normalize_keys(locale, key, scope, separator = nil)
-      keys = [locale] + Array(scope) + Array(key)
-      keys = keys.map { |k| k.to_s.split(separator || I18n.default_separator) }
-      keys = keys.flatten - ['']
-      keys.map { |k| k.to_sym }
+      separator ||= I18n.default_separator
+
+      keys = []
+      keys.concat normalize_key(locale, separator)
+      keys.concat normalize_key(scope, separator)
+      keys.concat normalize_key(key, separator)
+      keys
     end
 
   # making these private until Ruby 1.9.2 can send to protected methods again
@@ -306,6 +289,23 @@ module I18n
     # removed. Use I18n.normalize_keys instead.
     def normalize_translation_keys(locale, key, scope, separator = nil)
       normalize_keys(locale, key, scope, separator)
+    end
+
+    def normalize_key(key, separator)
+      normalized_key_cache[separator][key] ||=
+        case key
+        when Array
+          key.map { |k| normalize_key(k, separator) }.flatten
+        else
+          keys = key.to_s.split(separator)
+          keys.delete('')
+          keys.map!{ |k| k.to_sym }
+          keys
+        end
+    end
+
+    def normalized_key_cache
+      @normalized_key_cache ||= Hash.new { |h,k| h[k] = {} }
     end
   end
 end

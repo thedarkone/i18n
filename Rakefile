@@ -1,6 +1,10 @@
 require 'rake/testtask'
+require "rake/gempackagetask"
+require "rake/clean"
 
 task :default => [:test]
+
+CLEAN << "pkg" << "doc" << "coverage" << ".yardoc"
 
 Rake::TestTask.new(:test) do |t|
   t.pattern = "#{File.dirname(__FILE__)}/test/all.rb"
@@ -8,21 +12,13 @@ Rake::TestTask.new(:test) do |t|
 end
 Rake::Task['test'].comment = "Run all i18n tests"
 
-require File.expand_path("lib/i18n/version", File.dirname(__FILE__))
+Rake::GemPackageTask.new(eval(File.read("i18n.gemspec"))) { |pkg| }
 
 begin
-  require 'jeweler'
-  Jeweler::Tasks.new do |s|
-    s.name = "i18n"
-    s.version = I18n::VERSION
-    s.rubyforge_project = "i18n"
-    s.summary = "New wave Internationalization support for Ruby"
-    s.email = "rails-i18n@googlegroups.com"
-    s.homepage = "http://rails-i18n.org"
-    s.description = "Add Internationalization support to your Ruby application."
-    s.authors = ['Sven Fuchs', 'Joshua Harvey', 'Matt Aimonetti', 'Stephan Soller', 'Saimon Moore']
-    s.files =  FileList["[A-Z]*", "{lib,test}/**/*"]
+  require "yard"
+  YARD::Rake::YardocTask.new do |t|
+    t.options = ["--output-dir=doc"]
+    t.options << "--files" << ["CHANGELOG.textile", "contributors.txt", "MIT-LICENSE"].join(",")
   end
 rescue LoadError
-  puts "Jeweler, or one of its dependencies, is not available. Install it with: sudo gem install technicalpickles-jeweler -s http://gems.github.com"
 end

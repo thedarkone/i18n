@@ -48,26 +48,33 @@ module I18n
       class Translation < ::ActiveRecord::Base
         set_table_name 'translations'
         attr_protected :is_proc, :interpolations
-        
+
         serialize :value
         serialize :interpolations, Array
 
-        named_scope :locale, lambda { |locale|
+        scope_method = ::ActiveRecord::VERSION::MAJOR == 2 ? :named_scope : :scope
+
+        send scope_method, :locale, lambda { |locale|
           { :conditions => { :locale => locale.to_s } }
         }
 
-        named_scope :lookup, lambda { |keys, *separator|
+        send scope_method, :lookup, lambda { |keys, *separator|
           column_name = connection.quote_column_name('key')
-          keys        = Array(keys).map! { |key| key.to_s }
-          separator   = separator.first || I18n.default_separator
-          namespace   = "#{keys.last}#{separator}%"
+          keys = Array(keys).map! { |key| key.to_s }
+
+          unless separator.empty?
+            warn "[DEPRECATION] Giving a separator to Translation.lookup is deprecated. " <<
+              "You can change the internal separator by overwriting FLATTEN_SEPARATOR."
+          end
+
+          namespace = "#{keys.last}#{I18n::Backend::Flatten::FLATTEN_SEPARATOR}%"
           { :conditions => ["#{column_name} IN (?) OR #{column_name} LIKE ?", keys, namespace] }
         }
 
         def self.available_locales
           Translation.find(:all, :select => 'DISTINCT locale').map { |t| t.locale.to_sym }
         end
-        
+
         def interpolates?(key)
           self.interpolations.include?(key) if self.interpolations
         end

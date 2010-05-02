@@ -8,59 +8,58 @@ module I18n
       autoload :StoreProcs,  'i18n/backend/active_record/store_procs'
       autoload :Translation, 'i18n/backend/active_record/translation'
 
-      include Base, Links
+      module Implementation
+        include Base, Flatten
 
-      def reload!
-      end
-
-      def store_translations(locale, data, options = {})
-        separator = options[:separator] || I18n.default_separator
-        wind_keys(data, separator).each do |key, value|
-          store_link(locale, key, value) if value.is_a?(Symbol)
-          Translation.locale(locale).lookup(expand_keys(key, separator), separator).delete_all
-          Translation.create(:locale => locale.to_s, :key => key.to_s, :value => value)
+        def reload!
         end
-      end
 
-      def available_locales
-        begin
-          Translation.available_locales
-        rescue ::ActiveRecord::StatementInvalid
-          []
+        def available_locales
+          init_translations unless initialized?
+
+          begin
+            Translation.available_locales
+          rescue ::ActiveRecord::StatementInvalid
+            []
+          end
         end
-      end
 
       protected
 
         def lookup(locale, key, scope = [], options = {})
-          return unless key
-
-          separator = options[:separator] || I18n.default_separator
-
-          key = resolve_link(locale, key)
-          key = (Array(scope) + Array(key)).join(separator)
-          result = Translation.locale(locale).lookup(key, separator).all
+          key = normalize_flat_keys(locale, key, scope, options[:separator])
+          result = Translation.locale(locale).lookup(key).all
 
           if result.empty?
-            return nil
+            nil
           elsif result.first.key == key
-            return result.first.value
+            result.first.value
           else
-            chop_range = (key.size + separator.size)..-1
+            chop_range = (key.size + FLATTEN_SEPARATOR.size)..-1
             result = result.inject({}) do |hash, r|
               hash[r.key.slice(chop_range)] = r.value
               hash
             end
-            deep_symbolize_keys(unwind_keys(result, separator))
+            result.deep_symbolize_keys
+          end
+        end
+
+        def merge_translations(locale, data, options = {})
+          flatten_translations(locale, data).each do |key, value|
+            Translation.locale(locale).lookup(expand_keys(key)).delete_all
+            Translation.create(:locale => locale.to_s, :key => key.to_s, :value => value)
           end
         end
 
         # For a key :'foo.bar.baz' return ['foo', 'foo.bar', 'foo.bar.baz']
-        def expand_keys(key, separator = I18n.default_separator)
-          key.to_s.split(separator).inject([]) do |keys, key|
-            keys << [keys.last, key].compact.join(separator)
+        def expand_keys(key)
+          key.to_s.split(FLATTEN_SEPARATOR).inject([]) do |keys, key|
+            keys << [keys.last, key].compact.join(FLATTEN_SEPARATOR)
           end
         end
+      end
+
+      include Implementation
     end
   end
 end

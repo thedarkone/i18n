@@ -7,14 +7,13 @@ module I18n
     autoload :Chain,                 'i18n/backend/chain'
     autoload :Cldr,                  'i18n/backend/cldr'
     autoload :Fallbacks,             'i18n/backend/fallbacks'
-    autoload :Fast,                  'i18n/backend/fast'
+    autoload :Flatten,               'i18n/backend/flatten'
     autoload :Gettext,               'i18n/backend/gettext'
-    autoload :Helpers,               'i18n/backend/helpers'
-    autoload :LazyReloading,         'i18n/backend/lazy_reloading'
-    autoload :Links,                 'i18n/backend/links'
-    autoload :InterpolationCompiler, 'i18n/backend/interpolation_compiler'
+    autoload :KeyValue,              'i18n/backend/key_value'
+    autoload :Memoize,               'i18n/backend/memoize'
     autoload :Metadata,              'i18n/backend/metadata'
     autoload :Pluralization,         'i18n/backend/pluralization'
     autoload :Simple,                'i18n/backend/simple'
+    autoload :Transliterator,        'i18n/backend/transliterator'
   end
 end
