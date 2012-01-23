@@ -1,12 +1,10 @@
 module I18n
   module Backend
-    autoload :ActiveRecord,          'i18n/backend/active_record'
     autoload :Base,                  'i18n/backend/base'
     autoload :InterpolationCompiler, 'i18n/backend/interpolation_compiler'
     autoload :Cache,                 'i18n/backend/cache'
     autoload :Cascade,               'i18n/backend/cascade'
     autoload :Chain,                 'i18n/backend/chain'
-    autoload :Cldr,                  'i18n/backend/cldr'
     autoload :Fallbacks,             'i18n/backend/fallbacks'
     autoload :Flatten,               'i18n/backend/flatten'
     autoload :Gettext,               'i18n/backend/gettext'

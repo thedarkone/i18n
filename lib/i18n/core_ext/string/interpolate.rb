@@ -1,4 +1,11 @@
-# encoding: utf-8
+# This backports the Ruby 1.9 String interpolation syntax to Ruby 1.8.
+#
+# This backport has been shipped with I18n for a number of versions. Meanwhile
+# Rails has started to rely on it and we are going to move it to ActiveSupport.
+# See https://rails.lighthouseapp.com/projects/8994/tickets/6013-move-19-string-interpolation-syntax-backport-from-i18n-to-activesupport
+#
+# Once the above patch has been applied to Rails the following code will be
+# removed from I18n.
 
 =begin
   heavily based on Masao Mutoh's gettext String interpolation extension
@@ -7,13 +14,13 @@
   You may redistribute it and/or modify it under the same license terms as Ruby.
 =end
 
-if RUBY_VERSION < '1.9'
-
+begin
+  raise ArgumentError if ("a %{x}" % {:x=>'b'}) != 'a b'
+rescue ArgumentError
   # KeyError is raised by String#% when the string contains a named placeholder
   # that is not contained in the given arguments hash. Ruby 1.9 includes and
   # raises this exception natively. We define it to mimic Ruby 1.9's behaviour
   # in Ruby 1.8.x
-
   class KeyError < IndexError
     def initialize(message = nil)
       super(message || "key not found")
@@ -24,7 +31,6 @@ if RUBY_VERSION < '1.9'
   #
   # String#% method which accept "named argument". The translator can know
   # the meaning of the msgids using "named argument" instead of %s/%d style.
-
   class String
     # For older ruby versions, such as ruby-1.8.5
     alias :bytesize :size unless instance_methods.find {|m| m.to_s == 'bytesize'}

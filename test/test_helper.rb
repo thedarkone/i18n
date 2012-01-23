@@ -1,38 +1,23 @@
-# encoding: utf-8
-$KCODE = 'u' unless RUBY_VERSION >= '1.9'
-
-$:.unshift File.expand_path("../lib", File.dirname(__FILE__))
-$:.unshift File.expand_path(File.dirname(__FILE__))
-$:.uniq!
+$KCODE = 'u' if RUBY_VERSION <= '1.9'
 
 require 'rubygems'
 require 'test/unit'
-require 'time'
-require 'yaml'
 
+# Do not load the i18n gem from libraries like active_support.
+#
+# This is required for testing against Rails 2.3 because active_support/vendor.rb#24 tries
+# to load I18n using the gem method. Instead, we want to test the local library of course.
+alias :gem_for_ruby_19 :gem # for 1.9. gives a super ugly seg fault otherwise
+def gem(gem_name, *version_requirements)
+  gem_name =='i18n' ? puts("skipping loading the i18n gem ...") : super
+end
+
+require 'bundler/setup'
 require 'i18n'
-require 'test_setup_requirements'
-
-setup_mocha
+require 'mocha'
+require 'test_declarative'
 
 class Test::Unit::TestCase
-  def self.test(name, &block)
-    test_name = "test_#{name.gsub(/\s+/,'_')}".to_sym
-    defined = instance_method(test_name) rescue false
-    raise "#{test_name} is already defined in #{self}" if defined
-    if block_given?
-      define_method(test_name, &block)
-    else
-      define_method(test_name) do
-        flunk "No implementation provided for #{name}"
-      end
-    end
-  end
-
-  def self.with_mocha
-    yield if Object.respond_to?(:expects)
-  end
-
   def teardown
     I18n.locale = nil
     I18n.default_locale = :en
@@ -54,14 +39,13 @@ class Test::Unit::TestCase
   def locales_dir
     File.dirname(__FILE__) + '/test_data/locales'
   end
+end
 
-  def euc_jp(string)
-    string.encode!(Encoding::EUC_JP)
-  end
-
-  def can_store_procs?
-    I18n.backend.class != I18n::Backend::ActiveRecord or
-    I18n::Backend::ActiveRecord.included_modules.include?(I18n::Backend::ActiveRecord::StoreProcs)
+module Kernel
+  def setup_rufus_tokyo
+    require 'rufus/tokyo'
+  rescue LoadError => e
+    puts "can't use KeyValue backend because: #{e.message}"
   end
 end
 

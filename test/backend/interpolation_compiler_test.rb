@@ -1,7 +1,4 @@
-# encoding: utf-8
-$:.unshift(File.expand_path(File.dirname(__FILE__) + '/../')); $:.uniq!
 require 'test_helper'
-require 'api'
 
 class InterpolationCompilerTest < Test::Unit::TestCase
   Compiler = I18n::Backend::InterpolationCompiler::Compiler
@@ -82,12 +79,11 @@ class InterpolationCompilerTest < Test::Unit::TestCase
 end
 
 class I18nBackendInterpolationCompilerTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::InterpolationCompiler
   end
   
-  include Tests::Api::Interpolation
+  include I18n::Tests::Interpolation
 
   def setup
     I18n.backend = Backend.new
@@ -102,7 +98,5 @@ class I18nBackendInterpolationCompilerTest < Test::Unit::TestCase
     end
     super
   end
-  
-  # I kinda don't think this really is a correct behavior
-  undef :'test interpolation: given no values it does not alter the string'
+
 end

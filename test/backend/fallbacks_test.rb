@@ -1,10 +1,7 @@
-# encoding: utf-8
-$:.unshift(File.expand_path(File.dirname(__FILE__) + '/../')); $:.uniq!
 require 'test_helper'
 
 class I18nBackendFallbacksTranslateTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::Fallbacks
   end
 
@@ -38,12 +35,31 @@ class I18nBackendFallbacksTranslateTest < Test::Unit::TestCase
     assert_equal "Default Bar", I18n.t(:missing_bar, :locale => :'de-DE', :default => "Default Bar")
   end
 
+  test "returns the :de translation for a missing :'de-DE' when defaults is a Symbol (which exists in :en)" do
+    assert_equal "Bar in :de", I18n.t(:bar, :locale => :'de-DE', :default => [:buz])
+  end
+
+  test "returns the :'de-DE' default :baz translation for a missing :'de-DE' (which exists in :de)" do
+    assert_equal "Baz in :de-DE", I18n.t(:bar, :locale => :'de-DE', :default => [:baz])
+  end
+
+  test "returns the :de translation for a missing :'de-DE' when :default is a Proc" do
+    assert_equal 'Bar in :de', I18n.t(:bar, :locale => :'de-DE', :default => Proc.new { "Default Bar" })
+    assert_equal "Default Bar", I18n.t(:missing_bar, :locale => :'de-DE', :default => Proc.new { "Default Bar" })
+  end
+
+  test "returns the :de translation for a missing :'de-DE' when :default is a Hash" do
+    assert_equal 'Bar in :de', I18n.t(:bar, :locale => :'de-DE', :default => {})
+    assert_equal({}, I18n.t(:missing_bar, :locale => :'de-DE', :default => {}))
+  end
+
   test "returns the :'de-DE' default :baz translation for a missing :'de-DE' when defaults contains Symbol" do
     assert_equal 'Baz in :de-DE', I18n.t(:missing_foo, :locale => :'de-DE', :default => [:baz, "Default Bar"])
   end
 
-  test "returns the defaults translation for a missing :'de-DE' when defaults a contains String before Symbol" do
+  test "returns the defaults translation for a missing :'de-DE' when defaults contains a String or Proc before Symbol" do
     assert_equal "Default Bar", I18n.t(:missing_foo, :locale => :'de-DE', :default => [:missing_bar, "Default Bar", :baz])
+    assert_equal "Default Bar", I18n.t(:missing_foo, :locale => :'de-DE', :default => [:missing_bar, Proc.new { "Default Bar" }, :baz])
   end
 
   test "returns the default translation for a missing :'de-DE' and existing :de when default is a Hash" do
@@ -54,11 +70,14 @@ class I18nBackendFallbacksTranslateTest < Test::Unit::TestCase
     assert_raise(I18n::MissingTranslationData) { I18n.t(:faa, :locale => :en, :raise => true) }
     assert_raise(I18n::MissingTranslationData) { I18n.t(:faa, :locale => :de, :raise => true) }
   end
+
+  test "should ensure that default is not splitted on new line char" do
+    assert_equal "Default \n Bar", I18n.t(:missing_bar, :default => "Default \n Bar")
+  end
 end
 
 class I18nBackendFallbacksLocalizeTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::Fallbacks
   end
 
@@ -90,8 +109,7 @@ class I18nBackendFallbacksLocalizeTest < Test::Unit::TestCase
 end
 
 class I18nBackendFallbacksWithChainTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::Fallbacks
   end
 

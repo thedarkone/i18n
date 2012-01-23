@@ -1,10 +1,7 @@
-# encoding: utf-8
-$:.unshift(File.expand_path(File.dirname(__FILE__) + '/../')); $:.uniq!
 require 'test_helper'
 
 class I18nBackendMetadataTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::Metadata
   end
 
@@ -14,14 +11,14 @@ class I18nBackendMetadataTest < Test::Unit::TestCase
   end
 
   test "translation strings carry metadata" do
-    translation = I18n.t(:foo)
+    translation = I18n.t(:foo, :name => 'David')
     assert translation.respond_to?(:translation_metadata)
     assert translation.translation_metadata.is_a?(Hash)
   end
 
   test "translate preserves metadata stored on original Strings" do
     store_metadata(:foo, :bar, 'bar')
-    assert_equal 'bar', I18n.t(:foo).translation_metadata[:bar]
+    assert_equal 'bar', I18n.t(:foo, :name => 'David').translation_metadata[:bar]
   end
 
   test "translate preserves metadata stored on original Strings (when interpolated)" do
@@ -30,13 +27,13 @@ class I18nBackendMetadataTest < Test::Unit::TestCase
   end
 
   test "translate adds the locale to metadata on Strings" do
-    assert_equal :en, I18n.t(:foo, :locale => :en).translation_metadata[:locale]
+    assert_equal :en, I18n.t(:foo, :name => 'David', :locale => :en).translation_metadata[:locale]
   end
 
   test "translate adds the key to metadata on Strings" do
-    assert_equal :foo, I18n.t(:foo).translation_metadata[:key]
+    assert_equal :foo, I18n.t(:foo, :name => 'David').translation_metadata[:key]
   end
-
+#
   test "translate adds the default to metadata on Strings" do
     assert_equal 'bar', I18n.t(:foo, :default => 'bar', :name => '').translation_metadata[:default]
   end
@@ -49,8 +46,12 @@ class I18nBackendMetadataTest < Test::Unit::TestCase
     assert_equal('Hi %{name}', I18n.t(:foo, :name => 'David').translation_metadata[:original])
   end
 
-  test "pluralizatoin adds the count to metadata on Strings" do
+  test "pluralization adds the count to metadata on Strings" do
     assert_equal(1, I18n.t(:missing, :count => 1, :default => { :one => 'foo' }).translation_metadata[:count])
+  end
+
+  test "metadata works with frozen values" do
+    assert_equal(1, I18n.t(:missing, :count => 1, :default => 'foo'.freeze).translation_metadata[:count])
   end
   
   protected

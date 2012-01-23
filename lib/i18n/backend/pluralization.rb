@@ -1,15 +1,11 @@
-# encoding: utf-8
-
-# I18n locale fallbacks are useful when you want your application to use
-# translations from other locales when translations for the current locale are
-# missing. E.g. you might want to use :en translations when translations in
-# your applications main locale :de are missing.
+# I18n Pluralization are useful when you want your application to
+# customize pluralization rules.
 #
 # To enable locale specific pluralizations you can simply include the
 # Pluralization module to the Simple backend - or whatever other backend you
 # are using.
 #
-#   I18n::Backend::Simple.send(:include, I18n::Backend::Pluralization)
+#   I18n::Backend::Simple.include(I18n::Backend::Pluralization)
 #
 # You also need to make sure to provide pluralization algorithms to the
 # backend, i.e. include them to your I18n.load_path accordingly.
@@ -21,7 +17,7 @@ module I18n
       # rule and use it to pluralize the given entry. I.e. the library expects
       # pluralization rules to be stored at I18n.t(:'i18n.plural.rule')
       #
-      # Pluralization rules are expected to respond to #call(entry, count) and
+      # Pluralization rules are expected to respond to #call(count) and
       # return a pluralization key. Valid keys depend on the translation data
       # hash (entry) but it is generally recommended to follow CLDR's style,
       # i.e., return one of the keys :zero, :one, :few, :many, :other.

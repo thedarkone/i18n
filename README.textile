@@ -29,11 +29,15 @@ Alternative backends:
 * ActiveRecord (optionally: ActiveRecord::Missing and ActiveRecord::StoreProcs)
 * KeyValue (uses active_support/json and cannot store procs)
 
-For more information and lots of resources see: "http://rails-i18n.org/wiki":http://rails-i18n.org/wiki
+For more information and lots of resources see: "http://ruby-i18n.org/wiki":http://ruby-i18n.org/wiki
 
 h2. Installation
 
 gem install i18n
+
+h4. Rails version warning
+
+On Rails < 2.3.6 the method I18n.localize will fail with MissingInterpolationArgument (issue "20":http://github.com/svenfuchs/i18n/issues/issue/20). Upgrade to Rails 2.3.6 or higher (2.3.8 preferably) is recommended.
 
 h3. Installation on Rails < 2.3.5 (deprecated)
 
@@ -43,6 +47,7 @@ This requirement is relaxed in "6da03653":http://github.com/rails/rails/commit/6
 
 The new i18n gem can be loaded from vendor/plugins like this:
 
+<pre>
   def reload_i18n!
     raise "Move to i18n version 0.2.0 or greater" if Rails.version > "2.3.4"
 
@@ -50,6 +55,7 @@ The new i18n gem can be loaded from vendor/plugins like this:
     I18n::Backend.send :remove_const, "Simple"
     $: << Rails.root.join('vendor', 'plugins', 'i18n', 'lib').to_s
   end
+</pre>
 
 Then you can `reload_i18n!` inside an i18n initializer.
 
@@ -58,8 +64,12 @@ h2. Tests
 You can run tests both with
 
 * `rake test` or just `rake`
-* run any test file directly, e.g. `ruby test/api/simple_test.rb`
-* run all tests with `ruby test/all.rb`
+* run any test file directly, e.g. `ruby -Ilib -Itest test/api/simple_test.rb`
+* run all tests with `ruby -Ilib -Itest test/all.rb`
+
+You can run all tests against all Gemfiles with
+
+* `ruby test/run_all.rb`
 
 The structure of the test suite is a bit unusual as it uses modules to reuse
 particular tests in different test cases.
@@ -83,7 +93,6 @@ h2. Authors
 * "Stephan Soller":http://www.arkanis-development.de
 * "Saimon Moore":http://saimonmoore.net
 * "Matt Aimonetti":http://railsontherun.com
-* "thedarkone":http://github.com/thedarkone
 
 h2. Contributors
 

@@ -1,5 +1,3 @@
-# encoding: utf-8
-$:.unshift(File.expand_path(File.dirname(__FILE__) + '/../../')); $:.uniq!
 require 'test_helper'
 
 # thanks to Masao's String extensions these should work the same in
@@ -98,3 +96,4 @@ class I18nCoreExtStringInterpolationTest < Test::Unit::TestCase
     assert_raise(ArgumentError) { "%{name} %f" % [1.0, 2.0] }
   end
 end
+

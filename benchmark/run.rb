@@ -12,19 +12,19 @@ YAML_HASH = YAML.load_file(File.expand_path("example.yml", File.dirname(__FILE__
 module Backends
   Simple = I18n::Backend::Simple.new
 
-  Interpolation = Class.new do
-    include I18n::Backend::Base
+  Interpolation = Class.new(I18n::Backend::Simple) do
     include I18n::Backend::InterpolationCompiler
   end.new
 
   if DATA_STORES
     require 'rubygems'
-    require File.expand_path('../../test/test_setup_requirements', __FILE__)
+    require File.expand_path('../../test/test_setup/active_record', __FILE__)
+    require File.expand_path('../../test/test_setup/rufus_tokyo', __FILE__)
 
-    setup_active_record
+    Test.setup_active_record
     ActiveRecord = I18n::Backend::ActiveRecord.new if defined?(::ActiveRecord)
 
-    setup_rufus_tokyo
+    Test.setup_rufus_tokyo
     TokyoCabinet = I18n::Backend::KeyValue.new(Rufus::Tokyo::Cabinet.new("*"), true) if defined?(::Rufus::Tokyo)
   end
 end

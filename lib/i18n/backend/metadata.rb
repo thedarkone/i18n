@@ -12,7 +12,7 @@
 # To enable translation metadata you can simply include the Metadata module
 # into the Simple backend class - or whatever other backend you are using:
 #
-#   I18n::Backend::Simple.send(:include, I18n::Backend::Metadata)
+#   I18n::Backend::Simple.include(I18n::Backend::Metadata)
 #
 module I18n
   module Backend
@@ -38,15 +38,14 @@ module I18n
           :scope     => options[:scope],
           :default   => options[:default],
           :separator => options[:separator],
-          :values    => options.reject { |name, value| Base::RESERVED_KEYS.include?(name) }
+          :values    => options.reject { |name, value| RESERVED_KEYS.include?(name) }
         }
         with_metadata(metadata) { super }
       end
 
-      def interpolate(locale, string, values = {})
-        with_metadata(:original => string) do
-          preserve_translation_metadata(string) { super }
-        end if string
+      def interpolate(locale, entry, values = {})
+        metadata = entry.translation_metadata.merge(:original => entry)
+        with_metadata(metadata) { super }
       end
 
       def pluralize(locale, entry, count)
@@ -61,11 +60,6 @@ module I18n
           result
         end
 
-        def preserve_translation_metadata(object, &block)
-          result = yield
-          result.translation_metadata = object.translation_metadata if result
-          result
-        end
     end
   end
 end

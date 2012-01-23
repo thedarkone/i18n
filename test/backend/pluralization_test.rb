@@ -1,10 +1,7 @@
-# encoding: utf-8
-$:.unshift(File.expand_path(File.dirname(__FILE__) + '/../')); $:.uniq!
 require 'test_helper'
 
 class I18nBackendPluralizationTest < Test::Unit::TestCase
-  class Backend
-    include I18n::Backend::Base
+  class Backend < I18n::Backend::Simple
     include I18n::Backend::Pluralization
     include I18n::Backend::Fallbacks
   end

@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 # I18n locale fallbacks are useful when you want your application to use
 # translations from other locales when translations for the current locale are
 # missing. E.g. you might want to use :en translations when translations in
@@ -8,7 +6,7 @@
 # To enable locale fallbacks you can simply include the Fallbacks module to
 # the Simple backend - or whatever other backend you are using:
 #
-#   I18n::Backend::Simple.send(:include, I18n::Backend::Fallbacks)
+#   I18n::Backend::Simple.include(I18n::Backend::Fallbacks)
 module I18n
   @@fallbacks = nil
 
@@ -31,39 +29,37 @@ module I18n
       # locale :"de-DE" it might try the locales :"de-DE", :de and :en
       # (depends on the fallbacks implementation) until it finds a result with
       # the given options. If it does not find any result for any of the
-      # locales it will then raise a MissingTranslationData exception as
-      # usual.
+      # locales it will then throw MissingTranslation as usual.
       #
-      # The default option takes precedence over fallback locales
-      # only when it's not a String. When default contains String it
-      # is evaluated after fallback locales.
+      # The default option takes precedence over fallback locales only when
+      # it's a Symbol. When the default contains a String, Proc or Hash
+      # it is evaluated last after all the fallback locales have been tried.
       def translate(locale, key, options = {})
-        default = extract_string_default!(options) if options[:default]
+        return super if options[:fallback]
+        default = extract_non_symbol_default!(options) if options[:default]
 
+        options[:fallback] = true
         I18n.fallbacks[locale].each do |fallback|
-          begin
+          catch(:exception) do
             result = super(fallback, key, options)
             return result unless result.nil?
-          rescue I18n::MissingTranslationData
           end
         end
+        options.delete(:fallback)
 
         return super(locale, nil, options.merge(:default => default)) if default
-        raise(I18n::MissingTranslationData.new(locale, key, options))
+        throw(:exception, I18n::MissingTranslation.new(locale, key, options))
       end
 
-      def extract_string_default!(options)
-        defaults = Array(options[:default])
-        if index = find_first_string_default(defaults)
-          options[:default] = defaults[0, index]
-          defaults[index]
+      def extract_non_symbol_default!(options)
+        defaults = [options[:default]].flatten
+        first_non_symbol_default = defaults.detect{|default| !default.is_a?(Symbol)}
+        if first_non_symbol_default
+          options[:default] = defaults[0, defaults.index(first_non_symbol_default)]
         end
+        return first_non_symbol_default
       end
 
-      def find_first_string_default(defaults)
-        defaults.each_index { |ix| return ix if String === defaults[ix] }
-        nil
-      end
     end
   end
 end

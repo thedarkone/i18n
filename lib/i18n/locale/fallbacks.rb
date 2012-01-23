@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 # Locale Fallbacks
 #
 # Extends the I18n module to hold a fallbacks instance which is set to an
@@ -27,7 +25,7 @@
 #   # using the default locale as default fallback locale
 #
 #   I18n.default_locale = :"en-US"
-#   I18n.fallbacks = I18n::Fallbacks.new(:"de-AT" => :"de-DE")
+#   I18n.fallbacks = I18n::Locale::Fallbacks.new(:"de-AT" => :"de-DE")
 #   I18n.fallbacks[:"de-AT"] # => [:"de-AT", :"de-DE", :de, :"en-US", :en]
 #
 #   # using a custom locale as default fallback locale
@@ -75,9 +73,9 @@ module I18n
       def map(mappings)
         mappings.each do |from, to|
           from, to = from.to_sym, Array(to)
-          to.each do |to|
+          to.each do |_to|
             @map[from] ||= []
-            @map[from] << to.to_sym
+            @map[from] << _to.to_sym
           end
         end
       end
@@ -87,11 +85,11 @@ module I18n
       def compute(tags, include_defaults = true)
         result = Array(tags).collect do |tag|
           tags = I18n::Locale::Tag.tag(tag).self_and_parents.map! { |t| t.to_sym }
-          tags.each { |tag| tags += compute(@map[tag]) if @map[tag] }
+          tags.each { |_tag| tags += compute(@map[_tag]) if @map[_tag] }
           tags
         end.flatten
         result.push(*defaults) if include_defaults
-        result.uniq
+        result.uniq.compact
       end
     end
   end

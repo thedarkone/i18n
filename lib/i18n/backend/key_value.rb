@@ -1,6 +1,6 @@
-# encoding: utf-8
 require 'i18n/backend/base'
 require 'active_support/json'
+require 'active_support/ordered_hash' # active_support/json/encoding uses ActiveSupport::OrderedHash but does not require it
 
 module I18n
   module Backend
@@ -47,6 +47,7 @@ module I18n
     #
     #   I18n::Backend::KeyValue.new(@store, false)
     #
+    # This is useful if you are using a KeyValue backend chained to a Simple backend.
     class KeyValue
       module Implementation
         attr_accessor :store
@@ -57,13 +58,26 @@ module I18n
           @store, @subtrees = store, subtrees
         end
 
-        # Mute reload! since we really don't want to clean the database.
-        def reload!
+        def store_translations(locale, data, options = {})
+          escape = options.fetch(:escape, true)
+          flatten_translations(locale, data, escape, @subtrees).each do |key, value|
+            key = "#{locale}.#{key}"
+
+            case value
+            when Hash
+              if @subtrees && (old_value = @store[key])
+                old_value = ActiveSupport::JSON.decode(old_value)
+                value = old_value.deep_symbolize_keys.deep_merge!(value) if old_value.is_a?(Hash)
+              end
+            when Proc
+              raise "Key-value stores cannot handle procs"
+            end
+
+            @store[key] = ActiveSupport::JSON.encode(value) unless value.is_a?(Symbol)
+          end
         end
 
         def available_locales
-          init_translations unless initialized?
-
           locales = @store.keys.map { |k| k =~ /\./; $` }
           locales.uniq!
           locales.compact!
@@ -78,26 +92,6 @@ module I18n
           value = @store["#{locale}.#{key}"]
           value = ActiveSupport::JSON.decode(value) if value
           value.is_a?(Hash) ? value.deep_symbolize_keys : value
-        end
-
-        def merge_translations(locale, data, options = {})
-          flatten_translations(locale, data, @subtrees).each do |key, value|
-            key = "#{locale}.#{key}"
-
-            case value
-            when Hash
-              if @subtrees && (old_value = @store[key])
-                old_value = ActiveSupport::JSON.decode(old_value) 
-                value = old_value.deep_symbolize_keys.deep_merge!(value) if old_value.is_a?(Hash)
-              end
-            when Proc
-              raise "Key-value stores cannot handle procs"
-            when Symbol
-              value = nil
-            end
-
-            @store[key] = ActiveSupport::JSON.encode(value) unless value.nil?
-          end
         end
       end
 
